@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist Mono", monospace;
+  --font-mono: "Geist Mono", monospace;
+}
+
+@layer base {
+  body {
+    font-family: "Geist Mono", monospace;
+  }
+}
+
+.shiki {
+  background: transparent !important;
+}
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3D3020;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6a5a48;
+}
+
+.xterm {
+  height: 100%;
+}
+.xterm-viewport {
+  overflow-y: auto !important;
+}
+.xterm-screen {
+  width: 100% !important;
+}
+

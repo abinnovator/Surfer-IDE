@@ -1,0 +1,360 @@
+import { app, BrowserWindow, ipcMain, dialog, safeStorage, Menu } from 'electron'
+import { fileURLToPath } from 'node:url'
+import fs from 'fs'
+import path from 'path'
+import dotenv from 'dotenv'
+import os from 'os'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
+
+const execAsync = promisify(exec)
+
+
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+process.env.APP_ROOT = path.join(__dirname, '..')
+
+dotenv.config({
+  path: app.isPackaged 
+    ? path.join(process.resourcesPath, '.env')
+    : path.join(__dirname, '..', '.env')
+})
+export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
+export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
+
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+
+let win: BrowserWindow | null
+const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash'
+let ptyProcess: any = null
+const tokenPath = path.join(app.getPath('userData'), 'token.enc')
+
+ipcMain.handle('terminal:create', async (_, workspaceRoot: string) => {
+  const pty = await import('node-pty')
+  if (ptyProcess) {
+    ptyProcess.kill()
+    ptyProcess = null
+  }
+  ptyProcess = pty.default.spawn(shell, [], {
+    name: 'xterm-color',
+    cols: 80,
+    rows: 24,
+    cwd: workspaceRoot ?? process.env.HOME,
+    env: process.env as Record<string, string>,
+  })
+  ptyProcess.onData((data: string) => {
+    win?.webContents.send('terminal:data', data)
+  })
+})
+
+ipcMain.handle('terminal:write', (_, data: string) => {
+  ptyProcess?.write(data)
+})
+
+ipcMain.handle('terminal:resize', (_, cols: number, rows: number) => {
+  ptyProcess?.resize(cols, rows)
+})
+
+
+ipcMain.handle('store-token', (_, token: string) => {
+  const encrypted = safeStorage.encryptString(token)
+  fs.writeFileSync(tokenPath, encrypted)
+})
+
+ipcMain.handle('get-token', () => {
+  if (!fs.existsSync(tokenPath)) return null
+  const encrypted = fs.readFileSync(tokenPath)
+  return safeStorage.decryptString(Buffer.from(encrypted))
+})
+
+ipcMain.handle('delete-token', () => {
+  if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath)
+})
+
+
+ipcMain.handle('ai:chat', async (event, payload: { messages: any[], token: string, workspaceRoot: string, packId?: string }) => {
+  const { createGroq } = await import('@ai-sdk/groq')
+  const { streamText } = await import('ai')
+  const { Pool } = await import('pg')
+
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL_UNPOOLED,
+    ssl: { rejectUnauthorized: false }
+  })
+
+  try {
+    const token = payload.token?.trim() ?? ''
+    const { rows } = await pool.query(
+      'SELECT * FROM users WHERE api_token = $1',
+      [token]
+    )
+    const user = rows[0]
+
+    if (!user) {
+      event.sender.send('ai:chunk', 'Error: Invalid token. Make sure you copied your token correctly from surfer.aaditbhambri.com/token')
+      event.sender.send('ai:done')
+      return
+    }
+
+    const PLAN_LIMITS: Record<string, number> = {
+      free: 1_000_000,
+      pro: 5_000_000,
+      max: 20_000_000,
+    }
+    const limit = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.free
+    if (user.token_spend >= limit) {
+      event.sender.send('ai:chunk', 'Error: Token limit reached. Please upgrade your plan.')
+      event.sender.send('ai:done')
+      return
+    }
+
+    let projectContext = ''
+    if (payload.workspaceRoot) {
+      const indexPath = path.join(payload.workspaceRoot, '.surfer', 'index.json')
+      if (fs.existsSync(indexPath)) {
+        const index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'))
+        projectContext = `
+Project Stack: ${index.stack.join(', ')}
+Project Files:
+${index.files.map((f: any) => `- ${f.path}: ${f.summary}`).join('\n')}`
+      }
+    }
+
+    const groq = createGroq({ apiKey: process.env.GROQ_API_KEY! })
+    let model = 'openai/gpt-oss-120b'
+    let systemPrompt = ''
+
+    const packPath = payload.packId && payload.workspaceRoot
+      ? path.join(payload.workspaceRoot, '.surfer', 'packs', `${payload.packId}.json`)
+      : null
+
+    if (packPath && fs.existsSync(packPath)) {
+      const packData = JSON.parse(fs.readFileSync(packPath, 'utf-8'))
+      const specialPrompt = packData.data.aiProfile.systemPrompt
+      model = packData.data.aiProfile.model
+      systemPrompt = `${specialPrompt}${projectContext ? `\nProject context:\n${projectContext}` : '\nNo project indexed yet. Ask the user to click the index button.'}`
+    } else {
+      systemPrompt = `You are Surfer AI, a coding assistant built into the Surfer IDE. Your north star: your editor should understand what you're building, not just what you're typing. Be concise, helpful, and context-aware. Respond in markdown format and include code snippets when relevant.
+${projectContext ? `\nProject context:\n${projectContext}` : '\nNo project indexed yet. Ask the user to click the index button.'}`
+    }
+    const result = streamText({
+      model: groq(model),
+      system: systemPrompt,
+      messages: payload.messages,
+    })
+
+    for await (const chunk of result.textStream) {
+      event.sender.send('ai:chunk', chunk)
+    }
+
+    const usage = await result.usage
+    await pool.query(
+      'UPDATE users SET token_spend = token_spend + $1 WHERE id = $2',
+      [usage.totalTokens, user.id]
+    )
+
+    event.sender.send('ai:done')
+
+  } catch (err) {
+    console.error('ai:chat error:', err)
+    event.sender.send('ai:chunk', 'Error: Something went wrong.')
+    event.sender.send('ai:done')
+  } finally {
+    await pool.end()
+  }
+})
+
+
+ipcMain.handle('agent:run', async (event, payload: { task: string, workspaceRoot: string }) => {
+  const { createOrchestratorAgent } = await import('../src/agents/OrchestratorAgent')
+
+  const sendUpdate = (msg: string) => event.sender.send('agent:update', msg)
+
+  let projectContext = ''
+  const indexPath = path.join(payload.workspaceRoot, '.surfer', 'index.json')
+  if (fs.existsSync(indexPath)) {
+    const index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'))
+    projectContext = `
+Project Stack: ${index.stack.join(', ')}
+Project Files:
+${index.files.map((f: any) => `- ${f.path}: ${f.summary}`).join('\n')}`
+  }
+
+  const { agent, getTokens } = createOrchestratorAgent(payload.workspaceRoot, sendUpdate, projectContext)
+  const result = await agent.generate({ prompt: payload.task })
+  event.sender.send('agent:done', { result: result.text, tokens: getTokens() })
+})
+
+
+ipcMain.handle('project:index', async (event, workspaceRoot: string) => {
+  const { indexProject } = await import('../src/agents/index/IndexAgent')
+  const onUpdate = (msg: string) => event.sender.send('index:update', msg)
+  const index = await indexProject(workspaceRoot, onUpdate)
+  return index
+})
+
+
+ipcMain.handle('open-folder', async () => {
+  const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
+  if (result.canceled) return null
+  return result.filePaths[0]
+})
+
+ipcMain.handle('read-dir', async (_, dirPath: string) => {
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true })
+  return entries.map(entry => ({
+    name: entry.name,
+    path: path.join(dirPath, entry.name),
+    isDirectory: entry.isDirectory(),
+  }))
+})
+
+ipcMain.handle('read-file', async (_, filePath: string) => {
+  return fs.readFileSync(filePath, 'utf-8')
+})
+
+function findProjectRoot(startDir: string): string {
+  let dir = startDir
+  while (dir !== path.dirname(dir)) {
+    if (fs.existsSync(path.join(dir, 'tsconfig.json'))) return dir
+    dir = path.dirname(dir)
+  }
+  return startDir
+}
+
+async function getDiagnostics(filePath: string): Promise<string> {
+  const fileDir = path.dirname(filePath)
+  const projectRoot = findProjectRoot(fileDir)
+  const results: string[] = []
+
+  // ESLint
+  try {
+    await execAsync(`npx eslint --fix "${filePath}"`, { cwd: fileDir })
+  } catch (err: any) {
+    const out = (err.stdout ?? '').toString().trim()
+    if (out) results.push(out)
+  }
+
+  // TypeScript
+  try {
+    await execAsync(`npx tsc --noEmit --pretty false`, { cwd: projectRoot })
+  } catch (err: any) {
+    const out = (err.stdout ?? err.stderr ?? '').toString()
+    const rel = path.relative(projectRoot, filePath).replace(/\\/g, '/')
+    const filtered = out
+      .split('\n')
+      .filter((line: string) => line.includes(rel) || line.includes(path.basename(filePath)))
+      .join('\n')
+      .trim()
+    if (filtered) results.push(filtered)
+  }
+
+  return results.join('\n')
+}
+
+ipcMain.handle('write-file', async (_, filePath: string, content: string) => {
+  fs.writeFileSync(filePath, content, 'utf-8')
+  return getDiagnostics(filePath)
+})
+
+ipcMain.handle('lint-file', async (_, filePath: string) => {
+  return getDiagnostics(filePath)
+})
+
+
+ipcMain.handle('task:get-tasks', async () => {})
+ipcMain.handle('task:create-task', async () => {})
+ipcMain.handle('task:update-task', async () => {})
+
+ipcMain.handle('get-packs', async () => {
+  const res = await fetch('https://surfer.aaditbhambri.com/api/packs')
+  const { packs } = await res.json()
+  return packs
+})
+
+
+ipcMain.handle('install-pack', async (_, packId: string, workspaceRoot: string) => {
+  console.log(`Installing pack: ${packId}`)
+  const res = await fetch(`https://surfer.aaditbhambri.com/api/packs/${packId}`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch pack "${packId}": ${res.status} ${res.statusText}`)
+  }
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    const body = await res.text()
+    throw new Error(`Pack API returned non-JSON response for "${packId}": ${body.slice(0, 200)}`)
+  }
+  const { pack } = await res.json()
+  console.log(`Pack data received: ${pack}`)
+  const packDir = path.join(workspaceRoot, '.surfer', 'packs')
+  if (!fs.existsSync(packDir)) fs.mkdirSync(packDir, { recursive: true })
+  fs.writeFileSync(path.join(packDir, `${packId}.json`), JSON.stringify(pack, null, 2), 'utf-8')
+  return pack
+}
+)
+ipcMain.handle('check-pack-installed', async (_, packId: string, workspaceRoot: string) => {
+  const packPath = path.join(workspaceRoot, '.surfer', 'packs', `${packId}.json`)
+  const exists = fs.existsSync(packPath);
+  return exists
+})
+
+ipcMain.handle('get-installed-pack-details', async (_, packId:string, workspaceRoot: string )=> {
+  const packPath = path.join(workspaceRoot, '.surfer', 'packs', `${packId}.json`)
+  const content =  fs.readFileSync(packPath, 'utf-8')
+  console.log(content)
+  return content
+})
+
+ipcMain.handle('window:minimize', () => win?.minimize())
+ipcMain.handle('window:maximize', () => {
+  if (win?.isMaximized()) win?.unmaximize()
+  else win?.maximize()
+})
+ipcMain.handle('window:close', () => win?.close())
+ipcMain.handle('window:is-maximized', () => win?.isMaximized())
+ipcMain.handle("window:hide", () => win?.minimize())
+
+
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path.join(process.env.VITE_PUBLIC, 'wave.svg'),
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+    },
+    titleBarStyle: 'hidden'
+  })
+  win.webContents.openDevTools()
+
+  win.once('ready-to-show', () => {
+    win?.show()
+  })
+
+  win.webContents.on('did-finish-load', () => {
+    win?.webContents.send('main-process-message', (new Date).toLocaleString())
+  })
+
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL)
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+  }
+}
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+    win = null
+  }
+})
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow()
+})
+
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
+  createWindow()
+})

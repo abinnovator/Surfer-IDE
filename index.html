@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/wave.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Surfer IDE</title>
+    <style>
+      #loading {
+        position: fixed;
+        inset: 0;
+        background: #0f0b08;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: monospace;
+        color: #3D3020;
+        font-size: 13px;
+        z-index: 9999;
+      }
+    </style>
+
+  </head>
+  <body>
+    <div id="loading">surfer is loading...</div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
