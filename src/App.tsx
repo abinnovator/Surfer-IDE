@@ -8,6 +8,8 @@ import React from 'react'
 import Titlebar from './components/Titlebar'
 import LeftSidebar from './components/LeftSidebar'
 import { useStore, TerminalTab } from '../lib/zustand'
+import ActionsMenu from './components/QuickFileMenu'
+import Statusbar from './components/Statusbar'
 
 function App() {
   const openTabs = useStore.openTabs((state) => state.openTabs)
@@ -150,6 +152,9 @@ function App() {
     <div className="h-screen w-screen bg-[#0F0B08] text-white overflow-hidden flex flex-col">
 
       <Titlebar />
+      <div className="absolute top-40 left-1/2  z-50">
+        <ActionsMenu />
+      </div>
 
       <div className="flex flex-row flex-1 overflow-hidden">
 
@@ -304,10 +309,11 @@ function App() {
             </div>
           )}
         </div>
-
         <SidebarComponent workspaceRoot={folderPath || null} />
+        
 
       </div>
+        <Statusbar />
 
       {fileMenuOpen && (
         <div className="fixed inset-0 z-40" onClick={() => useStore.fileMenuOpen.getState().setFileMenuOpen(false)} />

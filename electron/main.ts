@@ -57,6 +57,24 @@ ipcMain.handle('terminal:resize', (_, cols: number, rows: number) => {
   ptyProcess?.resize(cols, rows)
 })
 
+ipcMain.handle('terminal:run', async (_, cwd: string, command: string) => {
+  if (!ptyProcess) {
+    const pty = await import('node-pty')
+    ptyProcess = pty.default.spawn(shell, [], {
+      name: 'xterm-color',
+      cols: 80,
+      rows: 24,
+      cwd,
+      env: process.env as Record<string, string>,
+    })
+    ptyProcess.onData((data: string) => {
+      win?.webContents.send('terminal:data', data)
+    })
+    await new Promise(r => setTimeout(r, 300))
+  }
+  ptyProcess.write(`${command}\r`)
+})
+
 
 ipcMain.handle('store-token', (_, token: string) => {
   const encrypted = safeStorage.encryptString(token)
@@ -201,7 +219,17 @@ ipcMain.handle('open-folder', async () => {
   if (result.canceled) return null
   return result.filePaths[0]
 })
-
+ipcMain.handle('create-folder', async (_, parentPath: string, folderName: string) => {
+  const newFolderPath = path.join(parentPath, folderName)
+  if (!fs.existsSync(newFolderPath)) {
+    fs.mkdirSync(newFolderPath)
+  }
+})
+ipcMain.handle("create-file", async (_, parentPath: string, fileName: string) => {
+  const newFilePath = path.join(parentPath, fileName)
+  if (!fs.existsSync(newFilePath)) {
+    fs.writeFileSync(newFilePath, '', 'utf-8')
+  }})
 ipcMain.handle('read-dir', async (_, dirPath: string) => {
   const entries = fs.readdirSync(dirPath, { withFileTypes: true })
   return entries.map(entry => ({
@@ -211,8 +239,23 @@ ipcMain.handle('read-dir', async (_, dirPath: string) => {
   }))
 })
 
+ipcMain.handle('run-command', (_, folderPath: string, command: string) => {
+  ptyProcess?.write(`cd "${folderPath}" && ${command}\r`)
+})
+
 ipcMain.handle('read-file', async (_, filePath: string) => {
   return fs.readFileSync(filePath, 'utf-8')
+})
+ipcMain.handle("delete-file", async (_, filePath: string) => {
+  if (fs.existsSync(filePath)) {
+    const stat = fs.statSync(filePath)
+    if (stat.isDirectory()) {
+      fs.rmSync(filePath, { recursive: true, force: true })
+    } else {
+      fs.unlinkSync(filePath)
+    }
+    return true
+  }
 })
 
 function findProjectRoot(startDir: string): string {
@@ -316,7 +359,45 @@ ipcMain.handle('window:close', () => win?.close())
 ipcMain.handle('window:is-maximized', () => win?.isMaximized())
 ipcMain.handle("window:hide", () => win?.minimize())
 
+ipcMain.handle('read-all-files', async (_, dirPath: string) => {
+  const ignored = ['node_modules', '.git', 'dist', '.next', '.surfer']
+  
+  const walk = (dir: string): any[] => {
+    const results: any[] = []
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (ignored.includes(entry.name)) continue
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          results.push(...walk(fullPath))
+        } else {
+          results.push({
+            name: entry.name,
+            path: fullPath,
+            isDirectory: false,
+          })
+        }
+      }
+    } catch {
+      console.log(`Failed to read directory: ${dir}`)
+    }
+    return results
+  }
 
+  return walk(dirPath)
+})
+ipcMain.handle('check-if-index-exists', async (_, workspaceRoot: string) => {
+  const indexPath = path.join(workspaceRoot, '.surfer', 'index.json')
+  return fs.existsSync(indexPath)
+})
+
+ipcMain.handle('get-index', async (_, workspaceRoot: string) => {
+  const indexPath = path.join(workspaceRoot, '.surfer', 'index.json')
+  if (!fs.existsSync(indexPath)) return null
+  const content = fs.readFileSync(indexPath, 'utf-8')
+  return JSON.parse(content)
+})
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'wave.svg'),

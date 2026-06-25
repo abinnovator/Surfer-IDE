@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { codeToHtml } from 'shiki'
+import { useStore } from '../../lib/zustand'
 
 const LANG_MAP: Record<string, string> = {
   ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx',
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function Editor({ content: initialContent, fileName, onSave, onLintResult }: Props) {
+  const setCursorPosition = useStore.filePosition(state => state.setCursorPosition)
   const [lineCount, setLineCount] = useState(() => initialContent.split('\n').length)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
@@ -81,6 +83,14 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
     if (pre) { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft }
     if (ln) ln.scrollTop = ta.scrollTop
   }, [])
+
+  const syncCursor = useCallback(() => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const before = ta.value.substring(0, ta.selectionStart)
+    const lines = before.split('\n')
+    setCursorPosition(lines.length, lines[lines.length - 1].length + 1)
+  }, [setCursorPosition])
 
   const handleKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const ta = textareaRef.current!
@@ -177,6 +187,8 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
           onInput={handleInput}
           onScroll={handleScroll}
           onKeyDown={handleKeyDown}
+          onKeyUp={syncCursor}
+          onClick={syncCursor}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"

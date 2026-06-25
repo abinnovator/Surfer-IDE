@@ -5,7 +5,26 @@ import path from 'path'
 
 const IGNORED = ['node_modules', '.git', 'dist', '.next', 'out', '.surfer']
 const SUPPORTED_EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'py', 'cs', 'gd', 'rs', 'go', 'java', 'json', 'md', 'html', 'css', 'toml', 'yaml']
+function detectStartCommand(workspaceRoot: string): string {
+  const packageJsonPath = path.join(workspaceRoot, 'package.json')
+  if (fs.existsSync(packageJsonPath)) {
+    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
+    if (pkg.scripts?.dev) return 'npm run dev'
+    if (pkg.scripts?.start) return 'npm start'
+    if (pkg.scripts?.serve) return 'npm run serve'
+  }
 
+  if (fs.existsSync(path.join(workspaceRoot, 'project.godot'))) return 'godot .'
+
+  if (fs.existsSync(path.join(workspaceRoot, 'main.py'))) return 'python main.py'
+  if (fs.existsSync(path.join(workspaceRoot, 'app.py'))) return 'python app.py'
+
+  if (fs.existsSync(path.join(workspaceRoot, 'Cargo.toml'))) return 'cargo run'
+
+  if (fs.existsSync(path.join(workspaceRoot, 'go.mod'))) return 'go run .'
+
+  return 'unknown'
+}
 
 interface FileIndex {
   path: string
@@ -19,6 +38,7 @@ interface ProjectIndex {
   root: string
   generatedAt: string
   stack: string[]
+  startCommand: string  // add this
   files: FileIndex[]
 }
 
@@ -115,15 +135,14 @@ export async function indexProject(
     root: workspaceRoot,
     generatedAt: new Date().toISOString(),
     stack,
+    startCommand: detectStartCommand(workspaceRoot),  // add this
     files: indexed,
   }
 
-  // save to .surfer/index.json
   const surferDir = path.join(workspaceRoot, '.surfer')
   fs.mkdirSync(surferDir, { recursive: true })
   fs.writeFileSync(path.join(surferDir, 'index.json'), JSON.stringify(index, null, 2), 'utf-8')
 
-  // auto add .surfer to .gitignore
   const gitignorePath = path.join(workspaceRoot, '.gitignore')
   if (fs.existsSync(gitignorePath)) {
     const gitignore = fs.readFileSync(gitignorePath, 'utf-8')

@@ -1,6 +1,7 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect } from 'react'
 import { useStore, FileEntry } from '.././../lib/zustand'
-import { ChevronDown, Maximize, Minimize, Minus, ScanSearch, X } from 'lucide-react'
+import { ChevronDown, Maximize, Minimize, Minus, ScanSearch, X, Play } from 'lucide-react'
+import toast from "react-hot-toast"
 
 const Titlebar = () => {
   const fileMenuOpen = useStore.fileMenuOpen((state) => state.fileMenuOpen)
@@ -14,6 +15,11 @@ const Titlebar = () => {
   const indexProject = async () => {
     if (!folderPath) return
     useStore.isIndexing.getState().setIsIndexing(true)
+    toast.success("Indexing project...",{style: {
+      borderRadius: '10px',
+      background: '#1E1710',
+      color: '#E8C088',
+    },})
 
     window.ipcRenderer.onIndexUpdate((msg: string) => {
       useStore.indexLog.getState().setIndexLog(msg)
@@ -21,6 +27,11 @@ const Titlebar = () => {
 
     await window.ipcRenderer.indexProject(folderPath)
     useStore.isIndexing.getState().setIsIndexing(false)
+    toast.success("Indexing completed!",{style: {
+      borderRadius: '10px',
+      background: '#1E1710',
+      color: '#E8C088',
+    },})
     useStore.indexLog.getState().setIndexLog('')
   }
   const handleMinimize = () => {
@@ -87,7 +98,51 @@ const Titlebar = () => {
     useStore.setFiles.getState().setFiles(sortEntries(entries))
     useStore.folderName.getState().setFolderName(folder.split(/[\\/]/).filter(Boolean).pop() || folder)
     togglePanel({ panel: 'file-explorer' })
+    const allFiles = await (window as any).ipcRenderer.readAllFiles(folder)
+    useStore.files.getState().setFiles(allFiles)
   }
+const runProject = async () => {
+    if (!folderPath) return
+    const index = await window.ipcRenderer.getIndex(folderPath)
+    const startCommand = index?.startCommand
+    if (!startCommand) {
+      toast.error("No run command found in index.json", {style: {
+        backgroundColor: '#1E1710',
+        color: '#C8B898',
+      }})
+      return
+    }
+    const tabs = useStore.terminalTabs.getState().terminalTabs
+    if (tabs.length === 0) {
+      useStore.terminalTabs.getState().setTerminalTabs([{ id: '1', label: 'Terminal 1' }])
+      useStore.activeTerminalTabId.getState().setActiveTerminalTab('1')
+    }
+    useStore.terminalOpen.getState().setTerminalOpen(true)
+    useStore.activeBottomSection.getState().setActiveBottomSection('terminal')
+    await window.ipcRenderer.terminal.run(folderPath, startCommand)
+  }
+  useEffect (() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'm') {
+        handleMinimize()
+      }
+      if (e.ctrlKey && e.key === 'w') {
+        closeWindow()
+      }
+      if (e.ctrlKey && e.key === 'h') {
+        hideWindow()
+      }
+      if (e.ctrlKey && e.key === 'o') {
+        handleOpenFolder()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
 
   return (
     <div className="flex flex-row items-center bg-[#1E1710] border-b-2 border-b-[#3D3020] h-10 px-4 gap-4 flex-shrink-0 relative z-50 justify-between" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
@@ -131,7 +186,11 @@ const Titlebar = () => {
         </button>
         </div>
         {/* Right */}
+
         <div className="flex flex-row gap-2 items-center">
+          <button onClick={runProject} className="text-[#9A8A78] cursor-pointer hover:text-[#E8C088] disabled:opacity-40 transition-colors" title='Run project' style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties} disabled={!folderPath}>
+            <Play size={20} />
+          </button>
           <button 
           onClick={indexProject} 
           disabled={indexing || !folderPath}

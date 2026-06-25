@@ -106,6 +106,24 @@ const problems = create<{ problems: string[]; setProblems: (problems: string[]) 
     setProblems: (problems) => set({ problems })
 }))
 
+const actionMenu = create <{ actionMenuOpen: boolean; setActionMenuOpen: (open: boolean) => void }>((set) => ({
+    actionMenuOpen: false,
+    setActionMenuOpen: (open) => set({ actionMenuOpen: open })
+}))
+const files = create<{ files: FileEntry[]; setFiles: (files: FileEntry[]) => void }>((set) => ({
+    files: [],
+    setFiles: (files) => set({ files })
+}))
+const timeTracked = create<{ timeTracked: number; setTimeTracked: (time: number) => void }>((set) => ({
+    timeTracked: 0,
+    setTimeTracked: (time) => set({ timeTracked: time })
+}))
+
+const filePosition = create<{ cursorLine: number; cursorCol: number; setCursorPosition: (line: number, col: number) => void }>((set) => ({
+    cursorLine: 0,
+    cursorCol: 0,
+    setCursorPosition: (line: number, col: number) => set({ cursorLine: line, cursorCol: col })
+}))
 export const useStore =  {
     fileMenuOpen,
     fileExplorerOpen,
@@ -128,5 +146,9 @@ export const useStore =  {
     terminalTabs,
     activeTerminalTabId,
     activeBottomSection,
-    problems
+    problems,
+    actionMenu,
+    files,
+    timeTracked,
+    filePosition
 }

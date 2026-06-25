@@ -98,7 +98,7 @@ const SidebarComponent = ({workspaceRoot}: {workspaceRoot: string | null}) => {
   if (!userToken) {
     return (
       <div className="flex flex-col justify-between w-64 border-l-2 border-l-[#3D3020] bg-[#16110B] flex-shrink-0">
-        <div className="flex flex-col justify-center items-center h-full px-4 gap-3">
+        <div className="flex flex-col justify-center items-center h-max px-4 gap-3">
           <p className="text-[#675D49] text-[12px] text-center">
             Please enter your token to use Surfer AI.<br />
             Don't have a token?{' '}

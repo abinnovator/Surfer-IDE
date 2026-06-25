@@ -35,6 +35,7 @@ interface Window {
       write: (data: string) => Promise<void>
       resize: (cols: number, rows: number) => Promise<void>
       onData: (cb: (data: string) => void) => void
+      run: (cwd: string, command: string) => Promise<void>
     }
     storeToken: (token: string) => Promise<void>
     getToken: () => Promise<string | null>
@@ -54,5 +55,11 @@ interface Window {
     windowIsMaximized: () => Promise<boolean>
     windowHide: () => Promise<void>
     lintFile: (filePath: string) => Promise<unknown>
+    readAllFiles: (path: string) => Promise<IpcFileEntry[]>
+    deleteFile: (path: string) => Promise<boolean>
+    createFolder: (parentPath: string, folderName: string) => Promise<void>
+    createFile: (parentPath: string, fileName: string) => Promise<void>
+    checkIfIndexExists: (workspaceRoot: string) => Promise<boolean>
+    getIndex: (workspaceRoot: string) => Promise<{ startCommand?: string; stack?: string[]; files?: IpcFileEntry[] } | null>
   }
 }

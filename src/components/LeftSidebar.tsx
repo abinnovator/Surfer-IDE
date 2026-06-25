@@ -1,8 +1,14 @@
 import { Files, Search, GitGraph, List, Package, ChevronDown, ChevronRight, Folder, FolderOpen, File } from 'lucide-react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import TaskList from '../TaskList'
 import LangPackCard from './LangPackCard'
 import { useStore, FileEntry } from '../../lib/zustand'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "./ui/context-menu"
 
 const updateEntry = (entries: FileEntry[], targetPath: string, updater: (e: FileEntry) => FileEntry): FileEntry[] => {
   return entries.map(entry => {
@@ -10,6 +16,12 @@ const updateEntry = (entries: FileEntry[], targetPath: string, updater: (e: File
     if (entry.children) return { ...entry, children: updateEntry(entry.children, targetPath, updater) }
     return entry
   })
+}
+
+const removeEntry = (entries: FileEntry[], targetPath: string): FileEntry[] => {
+  return entries
+    .filter(e => e.path !== targetPath)
+    .map(e => e.children ? { ...e, children: removeEntry(e.children, targetPath) } : e)
 }
 
 const sortEntries = (entries: FileEntry[]) => {
@@ -26,7 +38,43 @@ function FileTreeItem({ entry, depth = 0, onToggle, onOpenFile }: {
   onToggle: (entry: FileEntry) => void
   onOpenFile: (entry: FileEntry) => void
 }) {
+  const [createFolderName, setCreateFolderName] = useState('')
+  const [createFileName, setCreateFileName] = useState('')
+
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [creatingFile, setCreatingFile] = useState(false)
+  const deleteFile = async (entry: FileEntry) => {
+    await(window as any).ipcRenderer.deleteFile(entry.path)
+    useStore.setFiles.getState().setFiles(
+      removeEntry(useStore.setFiles.getState().files, entry.path)
+    )
+  }
+  const createFolder = async (entry: FileEntry, folderName: string) => {
+    await window.ipcRenderer.createFolder(entry.path, folderName)
+    const newChildren = await window.ipcRenderer.readDir(entry.path)
+    useStore.setFiles.getState().setFiles(
+      updateEntry(useStore.setFiles.getState().files, entry.path, (e) => ({
+        ...e,
+        isOpen: true,
+        children: sortEntries(newChildren),
+      }))
+    )
+  }
+  const createFile = async (entry: FileEntry, fileName: string) => {
+    await (window as any).ipcRenderer.createFile(entry.path, fileName)
+    const newChildren = await window.ipcRenderer.readDir(entry.path)
+    useStore.setFiles.getState().setFiles(
+      updateEntry(useStore.setFiles.getState().files, entry.path, (e) => ({
+        ...e,
+        isOpen: true,
+        children: sortEntries(newChildren),
+      }))
+    )
+  }
+  
   return (
+    <ContextMenu>
+      <ContextMenuTrigger>
     <div>
       <div
         className="flex items-center gap-1.5 py-0.5 hover:bg-[#3D3020] cursor-pointer text-[#9A8A78] hover:text-[#E8C088] text-[11px] rounded transition-colors"
@@ -45,12 +93,67 @@ function FileTreeItem({ entry, depth = 0, onToggle, onOpenFile }: {
             : <Folder size={12} className="flex-shrink-0" />
           : <File size={12} className="flex-shrink-0" />
         }
+        {creatingFolder && entry.isDirectory ? (
+          <input
+            type="text"
+            placeholder="Folder name"
+            className="bg-[#16110B] text-gray-300 placeholder:text-gray-500 border-[#3D3020] border-2 p-1 rounded"
+            autoFocus
+            onChange={(e) => setCreateFolderName(e.target.value)}
+            onBlur={() => setCreatingFolder(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                createFolder(entry, createFolderName)
+                setCreatingFolder(false)
+                setCreateFolderName('')
+              }
+            }}
+          />
+        ) : null}
+        {creatingFile && entry.isDirectory ? (
+          <input
+            type="text"
+            placeholder="File name"
+            className="bg-[#16110B] text-gray-300 placeholder:text-gray-500 border-[#3D3020] border-2 p-1 rounded"
+            autoFocus
+            onChange={(e) => setCreateFileName(e.target.value)}
+            onBlur={() => setCreatingFile(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                createFile(entry, createFileName)
+                setCreatingFile(false)
+                setCreateFileName('')
+              }
+            }}
+          />
+        ) : null}
         <span className="truncate">{entry.name}</span>
       </div>
       {entry.isOpen && entry.children && sortEntries(entry.children).map(child => (
         <FileTreeItem key={child.path} entry={child} depth={depth + 1} onToggle={onToggle} onOpenFile={onOpenFile} />
       ))}
     </div>
+    </ContextMenuTrigger>
+    <ContextMenuContent className="bg-[#16110B] text-gray-300 border-[#3D3020] border-2 p-2 rounded-2xl">
+      {entry.isDirectory && (
+        <>
+        <ContextMenuItem className="text-white" onClick={() => {
+          setCreatingFile(true)
+        }}>
+          Create File
+        </ContextMenuItem>
+        <ContextMenuItem className="text-white" onClick={() => {
+          setCreatingFolder(true)
+        }}>
+          Create folder
+        </ContextMenuItem>
+        </>
+      )}
+      <ContextMenuItem className="text-white" onClick={() => deleteFile(entry)}>
+        Delete
+      </ContextMenuItem>
+    </ContextMenuContent>
+    </ContextMenu>
   )
 }
 const LeftSidebar = () => {
@@ -63,6 +166,9 @@ const LeftSidebar = () => {
     const folderPath = useStore.folderPath((state) => state.folderPath)
     const files = useStore.setFiles((state) => state.files)
     const packs = useStore.packs((state) => state.packs)
+    const [rootCreatingFile, setRootCreatingFile] = useState(false)
+    const [rootCreatingFolder, setRootCreatingFolder] = useState(false)
+    const [rootInputName, setRootInputName] = useState('')
 
     const handleToggleFolder = async (entry: FileEntry) => {
       if (entry.isOpen) {
@@ -153,16 +259,59 @@ const LeftSidebar = () => {
                 <h1 className="text-[#363636] text-[11px] uppercase tracking-widest">{folderName ? folderName : 'No folder Opened'}</h1>
               </div>
               {/* scrollable file list */}
-              <div className="flex flex-col py-2 gap-0.5 overflow-y-auto flex-1">
-                {files.map((file) => (
-                  <FileTreeItem
-                    key={file.path}
-                    entry={file}
-                    onToggle={handleToggleFolder}
-                    onOpenFile={handleOpenFile}
-                  />
-                ))}
-              </div>
+              <ContextMenu>
+                <ContextMenuTrigger className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex flex-col py-2 gap-0.5 overflow-y-auto flex-1">
+                    {(rootCreatingFile || rootCreatingFolder) && folderPath && (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5">
+                        {rootCreatingFolder
+                          ? <Folder size={12} className="flex-shrink-0 text-[#9A8A78]" />
+                          : <File size={12} className="flex-shrink-0 text-[#9A8A78]" />
+                        }
+                        <input
+                          type="text"
+                          placeholder={rootCreatingFolder ? 'Folder name' : 'File name'}
+                          className="bg-[#16110B] text-gray-300 placeholder:text-gray-500 border-[#3D3020] border p-0.5 rounded text-[11px] w-full focus:outline-none"
+                          autoFocus
+                          value={rootInputName}
+                          onChange={(e) => setRootInputName(e.target.value)}
+                          onBlur={() => { setRootCreatingFile(false); setRootCreatingFolder(false); setRootInputName('') }}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter' && rootInputName.trim()) {
+                              if (rootCreatingFolder) {
+                                await window.ipcRenderer.createFolder(folderPath, rootInputName.trim())
+                              } else {
+                                await window.ipcRenderer.createFile(folderPath, rootInputName.trim())
+                              }
+                              const newChildren = await window.ipcRenderer.readDir(folderPath)
+                              useStore.setFiles.getState().setFiles(sortEntries(newChildren))
+                              setRootCreatingFile(false)
+                              setRootCreatingFolder(false)
+                              setRootInputName('')
+                            } else if (e.key === 'Escape') {
+                              setRootCreatingFile(false)
+                              setRootCreatingFolder(false)
+                              setRootInputName('')
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                    {files.map((file) => (
+                      <FileTreeItem
+                        key={file.path}
+                        entry={file}
+                        onToggle={handleToggleFolder}
+                        onOpenFile={handleOpenFile}
+                      />
+                    ))}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="bg-[#16110D] border-[#3D3020] border-2 p-2 rounded-2xl">
+                  <ContextMenuItem className="text-white" onClick={() => { setRootCreatingFile(true); setRootCreatingFolder(false); setRootInputName('') }}>New File</ContextMenuItem>
+                  <ContextMenuItem className="text-white" onClick={() => { setRootCreatingFolder(true); setRootCreatingFile(false); setRootInputName('') }}>New Folder</ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             </div>
     
             {/* Search Menu */}
