@@ -61,5 +61,10 @@ interface Window {
     createFile: (parentPath: string, fileName: string) => Promise<void>
     checkIfIndexExists: (workspaceRoot: string) => Promise<boolean>
     getIndex: (workspaceRoot: string) => Promise<{ startCommand?: string; stack?: string[]; files?: IpcFileEntry[] } | null>
+    getInlineSuggestion: (payload: { filePath: string; fileContent: string; token: string; cursorPosition: { line: number; column: number }; workspaceRoot?: string; packId?: string }) => Promise<{ suggestion: string | null; error: string | null }>
+    createWindow: () => Promise<void>
+    openSettings: () => Promise<void>
+    getActiveTheme: () => Promise<string>
+    getSpecificTheme: (themeId: string) => Promise<{ video?: string } | null>
   }
 }

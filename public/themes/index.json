@@ -1,0 +1,44 @@
+{
+  "activeTheme": "cosy-rainy",
+  "themes": [
+  {
+    "id": "cosy-dark",
+    "name": "Cosy Dark",
+    "description": "Warm amber tones, no video",
+    "preview": "#0f0b08"
+  },
+  {
+    "id": "cosy-video",
+    "name": "Cosy Video",
+    "description": "Lofi video background",
+    "preview": "#0f0b08",
+    "video": "./videos/Chillhop_White_Oak.mp4"
+  },
+  {
+    "id": "cosy-rainy",
+    "name": "Cosy Rainy",
+    "description": "Rainy day ambiance",
+    "preview": "#0f0b08",
+    "video": "./videos/Rainy_Day.mp4"
+  },
+    {
+        "id": "cosy-snowy",
+        "name": "Cosy Snowy",
+        "description": "Snowy winter ambiance",
+        "preview": "#0f0b08",
+        "video": "/videos/Snowy_Winter.mp4"
+    },
+    {
+        "id": "modern",
+        "name": "Modern",
+        "description": "Sleek and minimalistic design like vscode",
+        "preview": "#0f0b08"
+        
+    },
+    {"id": "cosy-classic",
+    "name": "Cosy Classic",
+    "description": "Classic cosy theme with warm tones",
+    "preview": "#0f0b08"}
+  ]
+}
+  

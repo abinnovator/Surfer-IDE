@@ -1,6 +1,5 @@
-import React from 'react'
 import { useStore } from '../../lib/zustand'
-import { ClockIcon } from 'lucide-react'
+import { ClockIcon, Video } from 'lucide-react'
 
 const Statusbar = () => {
     const openTabs = useStore.openTabs((state) => state.openTabs)
@@ -20,6 +19,9 @@ const Statusbar = () => {
                 <span className="text-[8px]">{activeTab.name}</span>
             )}
             <span className="flex flex-row text-[10px] gap-2"><ClockIcon size={12} /> {timeTracked} </span>
+            <button onClick={() => useStore.video.getState().setVideo(!useStore.video.getState().video)} className="cursor-pointer">
+                <Video size={12} />
+            </button>
         </div>
         <div className="flex flex-row gap-3">
             {activeTab && (

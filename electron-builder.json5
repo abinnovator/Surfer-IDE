@@ -45,6 +45,10 @@
       {
         "from": ".env",
         "to": ".env"
+      },
+      {
+        "from":"public",
+        to: "public"
       }
     ]
   }

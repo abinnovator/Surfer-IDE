@@ -27,10 +27,96 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 let win: BrowserWindow | null
+let settingsWin: BrowserWindow | null = null
 const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash'
 let ptyProcess: any = null
 const tokenPath = path.join(app.getPath('userData'), 'token.enc')
 
+ipcMain.handle('ai:get-inline-suggestion', async (_, payload: {
+  filePath: string
+  fileContent: string
+  token: string
+  cursorPosition: { line: number, column: number }
+  packId?: string
+  workspaceRoot?: string
+}) => {
+  const { createGroq } = await import('@ai-sdk/groq')
+  const { generateText } = await import('ai')
+  const { Pool } = await import('pg')
+
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL_UNPOOLED,
+    ssl: { rejectUnauthorized: false }
+  })
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM users WHERE api_token = $1',
+      [payload.token.trim()]
+    )
+    const user = rows[0]
+
+    if (!user) {
+      return { suggestion: null, error: 'Invalid token' }
+    }
+
+    const PLAN_LIMITS: Record<string, number> = {
+      free: 1_000_000,
+      pro: 5_000_000,
+      max: 20_000_000,
+    }
+    const limit = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.free
+    if (user.token_spend >= limit) {
+      return { suggestion: null, error: 'Token limit reached' }
+    }
+
+    const lines = payload.fileContent.split('\n')
+    const beforeCursor = lines
+      .slice(0, payload.cursorPosition.line - 1)
+      .join('\n') + '\n' + (lines[payload.cursorPosition.line - 1]?.substring(0, payload.cursorPosition.column) ?? '')
+    const afterCursor = (lines[payload.cursorPosition.line - 1]?.substring(payload.cursorPosition.column) ?? '') +
+      '\n' + lines.slice(payload.cursorPosition.line).join('\n')
+
+    let projectContext = ''
+    if (payload.workspaceRoot) {
+      const indexPath = path.join(payload.workspaceRoot, '.surfer', 'index.json')
+      if (fs.existsSync(indexPath)) {
+        const index = JSON.parse(fs.readFileSync(indexPath, 'utf-8'))
+        projectContext = `Project Stack: ${index.stack.join(', ')}\nFiles:\n${index.files.map((f: any) => `- ${f.path}: ${f.summary}`).join('\n')}`
+      }
+    }
+
+    const groq = createGroq({ apiKey: process.env.GROQ_API_KEY! })
+    let model = 'openai/gpt-oss-120b'
+    const packPath = payload.packId && payload.workspaceRoot
+      ? path.join(payload.workspaceRoot, '.surfer', 'packs', `${payload.packId}.json`)
+      : null
+    if (packPath && fs.existsSync(packPath)) {
+      const packData = JSON.parse(fs.readFileSync(packPath, 'utf-8'))
+      model = packData.data.aiProfile.model ?? model
+    }
+
+    const { text, usage } = await generateText({
+      model: groq(model),
+      system: `You are a code completion engine inside Surfer IDE. Complete the code at the cursor position. Return ONLY the completion text — no explanation, no markdown, no backticks. Keep it short, one to a few lines max.${projectContext ? `\n\n${projectContext}` : ''}`,
+      prompt: `File: ${payload.filePath}\n\nCode before cursor:\n${beforeCursor.slice(-800)}\n\nCode after cursor:\n${afterCursor.slice(0, 200)}\n\nComplete the code:`,
+      maxOutputTokens: 80,
+    })
+
+    await pool.query(
+      'UPDATE users SET token_spend = token_spend + $1 WHERE id = $2',
+      [usage.totalTokens, user.id]
+    )
+
+    return { suggestion: text.trim(), error: null }
+
+  } catch (err) {
+    console.error('ai:get-inline-suggestion error:', err)
+    return { suggestion: null, error: 'Something went wrong' }
+  } finally {
+    await pool.end()
+  }
+})
 ipcMain.handle('terminal:create', async (_, workspaceRoot: string) => {
   const pty = await import('node-pty')
   if (ptyProcess) {
@@ -272,7 +358,6 @@ async function getDiagnostics(filePath: string): Promise<string> {
   const projectRoot = findProjectRoot(fileDir)
   const results: string[] = []
 
-  // ESLint
   try {
     await execAsync(`npx eslint --fix "${filePath}"`, { cwd: fileDir })
   } catch (err: any) {
@@ -280,7 +365,6 @@ async function getDiagnostics(filePath: string): Promise<string> {
     if (out) results.push(out)
   }
 
-  // TypeScript
   try {
     await execAsync(`npx tsc --noEmit --pretty false`, { cwd: projectRoot })
   } catch (err: any) {
@@ -297,9 +381,40 @@ async function getDiagnostics(filePath: string): Promise<string> {
   return results.join('\n')
 }
 
+async function formatFile(filePath: string): Promise<string | null> {
+  try {
+    const prettier = await import('prettier')
+    const content = fs.readFileSync(filePath, 'utf-8')
+    
+    const info = await prettier.getFileInfo(filePath)
+    if (!info.inferredParser) return null 
+    
+    const formatted = await prettier.format(content, {
+      parser: info.inferredParser,
+      semi: true,
+      singleQuote: true,
+      tabWidth: 2,
+    })
+    return formatted
+  } catch (err) {
+    console.error('prettier error:', err)
+    return null
+  }
+}
 ipcMain.handle('write-file', async (_, filePath: string, content: string) => {
   fs.writeFileSync(filePath, content, 'utf-8')
-  return getDiagnostics(filePath)
+
+  const formatted = await formatFile(filePath)
+  if (formatted && formatted !== content) {
+    fs.writeFileSync(filePath, formatted, 'utf-8')
+  }
+
+  // Run diagnostics async so the editor can reload the formatted file immediately
+  getDiagnostics(filePath).then(output => {
+    win?.webContents.send('diagnostics:result', { filePath, output })
+  })
+
+  return formatted ?? content
 })
 
 ipcMain.handle('lint-file', async (_, filePath: string) => {
@@ -349,7 +464,12 @@ ipcMain.handle('get-installed-pack-details', async (_, packId:string, workspaceR
   console.log(content)
   return content
 })
-
+ipcMain.handle('settings-window: close', () => {
+  if (settingsWin) {
+    settingsWin.close()
+    settingsWin = null
+  }
+})
 ipcMain.handle('window:minimize', () => win?.minimize())
 ipcMain.handle('window:maximize', () => {
   if (win?.isMaximized()) win?.unmaximize()
@@ -398,6 +518,62 @@ ipcMain.handle('get-index', async (_, workspaceRoot: string) => {
   const content = fs.readFileSync(indexPath, 'utf-8')
   return JSON.parse(content)
 })
+ipcMain.handle('create-window', async () => {
+  createWindow()
+})
+
+ipcMain.handle('window:open-settings', () => {
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.focus()
+    return
+  }
+  settingsWin = new BrowserWindow({
+    width: 720,
+    height: 520,
+    resizable: false,
+    icon: path.join(process.env.VITE_PUBLIC, 'wave.svg'),
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+    },
+    titleBarStyle: 'hidden',
+    title: 'Settings',
+  })
+  settingsWin.once('ready-to-show', () => settingsWin?.show())
+  settingsWin.on('closed', () => { settingsWin = null })
+  if (VITE_DEV_SERVER_URL) {
+    settingsWin.loadURL(VITE_DEV_SERVER_URL + '#settings')
+  } else {
+    settingsWin.loadFile(path.join(RENDERER_DIST, 'index.html'), { hash: 'settings' })
+  }
+})
+ipcMain.handle('create-theme', async (_, themeData: {id: string, name: string, colors: {background: string, titlebar: string, sidebar: string, border: string, accent: string,text: string, textMuted: string, textDim: string,}, videoUrl: string}, workspaceRoot: string) => {
+  const themesDir = path.join(workspaceRoot, '.surfer', 'themes')
+  if (!fs.existsSync(themesDir)) fs.mkdirSync(themesDir, { recursive: true })
+  const themePath = path.join(themesDir, `${themeData.id}.json`)
+  fs.writeFileSync(themePath, JSON.stringify(themeData))
+})
+ipcMain.handle('dev:open-devtools', () => {
+  win?.webContents.openDevTools()
+})
+ipcMain.handle('get-specific-theme', (_, id: string) => {
+  return getSpecificTheme(id)
+})
+ipcMain.handle('get-active-theme-id', () => {
+  return getActiveThemeID()
+})
+function getSpecificTheme(id: string): Record<string, unknown> | null {
+  const themePath = path.join(process.env.VITE_PUBLIC, 'themes', `${id}.json`)
+  if (!fs.existsSync(themePath)) return null
+  const content = fs.readFileSync(themePath, 'utf-8')
+  return JSON.parse(content) as Record<string, unknown>
+}
+function getActiveThemeID(): string | null {
+  const themePath = path.join(process.env.VITE_PUBLIC, 'themes', 'index.json')
+  if (!fs.existsSync(themePath)) return null
+  const content = fs.readFileSync(themePath, 'utf-8')
+  return (JSON.parse(content) as { activeTheme: string }).activeTheme
+}
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'wave.svg'),
@@ -407,7 +583,6 @@ function createWindow() {
     },
     titleBarStyle: 'hidden'
   })
-  win.webContents.openDevTools()
 
   win.once('ready-to-show', () => {
     win?.show()

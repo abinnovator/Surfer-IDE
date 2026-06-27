@@ -1,12 +1,15 @@
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
+import Settings from './components/Settings.tsx'
 import './index.css'
 import { Toaster } from 'react-hot-toast'
+
+const isSettings = window.location.hash === '#settings'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <>
     <Toaster />
-    <App />
+    {isSettings ? <Settings /> : <App />}
   </>,
 )
 

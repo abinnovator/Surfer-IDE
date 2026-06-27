@@ -124,6 +124,16 @@ const filePosition = create<{ cursorLine: number; cursorCol: number; setCursorPo
     cursorCol: 0,
     setCursorPosition: (line: number, col: number) => set({ cursorLine: line, cursorCol: col })
 }))
+
+const unsavedFiles = create<{ unsavedFiles: string[]; setUnsavedFiles: (files: string[]) => void }>((set) => ({
+    unsavedFiles: [],
+    setUnsavedFiles: (files) => set({ unsavedFiles: files }),
+    removeSavedFile: (filePath: string) => set(state => ({ unsavedFiles: state.unsavedFiles.filter(p => p !== filePath) }))
+}))
+const video = create<{ video: boolean; setVideo: (video: boolean) => void }>((set) => ({
+    video: true,
+    setVideo: (video) => set({ video })
+}))
 export const useStore =  {
     fileMenuOpen,
     fileExplorerOpen,
@@ -150,5 +160,7 @@ export const useStore =  {
     actionMenu,
     files,
     timeTracked,
-    filePosition
+    filePosition,
+    unsavedFiles,
+    video
 }

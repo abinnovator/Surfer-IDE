@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react'
 import { useStore, FileEntry } from '.././../lib/zustand'
-import { ChevronDown, Maximize, Minimize, Minus, ScanSearch, X, Play } from 'lucide-react'
+import { ChevronDown, Maximize, Minimize, Minus, ScanSearch, Settings, X, Play } from 'lucide-react'
 import toast from "react-hot-toast"
 
 const Titlebar = () => {
@@ -101,7 +101,7 @@ const Titlebar = () => {
     const allFiles = await (window as any).ipcRenderer.readAllFiles(folder)
     useStore.files.getState().setFiles(allFiles)
   }
-const runProject = async () => {
+  const runProject = async () => {
     if (!folderPath) return
     const index = await window.ipcRenderer.getIndex(folderPath)
     const startCommand = index?.startCommand
@@ -135,6 +135,18 @@ const runProject = async () => {
       if (e.ctrlKey && e.key === 'o') {
         handleOpenFolder()
       }
+      if (e.shiftKey && e.key === 'n') {
+        createNewWindow()
+      }
+      if (e.ctrlKey && e.key === 'r'){
+        runProject()
+      }
+      if (e.ctrlKey && e.key === 'i') {
+        indexProject()
+      }
+      if (e.ctrlKey && e.key === 'd') {
+        (window as any).ipcRenderer.openDevTools()
+      }
     }
 
     window.addEventListener('keydown', onKeyDown)
@@ -143,6 +155,9 @@ const runProject = async () => {
       window.removeEventListener('keydown', onKeyDown)
     }
   }, [])
+  const createNewWindow = async () => {
+    await (window as any).ipcRenderer.createWindow()
+  }
 
   return (
     <div className="flex flex-row items-center bg-[#1E1710] border-b-2 border-b-[#3D3020] h-10 px-4 gap-4 flex-shrink-0 relative z-50 justify-between" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
@@ -161,7 +176,7 @@ const runProject = async () => {
           </button>
           {fileMenuOpen && (
             <div className="absolute top-full left-0 mt-1 bg-[#1E1710] border border-[#3D3020] rounded shadow-xl z-50 w-48 py-1">
-              <button className="w-full text-left px-3 py-1.5 text-[11px] text-[#9A8A78] hover:bg-[#3D3020] hover:text-[#E8C088]" onClick={handleOpenFolder}>
+              <button className="w-full text-left px-3 py-1.5 text-[11px] text-[#9A8A78] hover:bg-[#3D3020] hover:text-[#E8C088]" onClick={handleOpenFolder} title="ctrl+o">
                 Open Folder
               </button>
               <button className="w-full text-left px-3 py-1.5 text-[11px] text-[#9A8A78] hover:bg-[#3D3020] hover:text-[#E8C088]">
@@ -169,6 +184,9 @@ const runProject = async () => {
               </button>
               <button className="w-full text-left px-3 py-1.5 text-[11px] text-[#9A8A78] hover:bg-[#3D3020] hover:text-[#E8C088]">
                 Save
+              </button>
+              <button className="w-full text-left px-3 py-1.5 text-[11px] text-[#9A8A78] hover:bg-[#3D3020] hover:text-[#E8C088]" onClick={createNewWindow} title="shift+n">
+                Create new window
               </button>
               <div className="border-t border-[#3D3020] my-1" />
               <button className="w-full text-left px-3 py-1.5 text-[11px] text-[#9A8A78] hover:bg-[#3D3020] hover:text-[#E8C088]">
@@ -191,6 +209,9 @@ const runProject = async () => {
           <button onClick={runProject} className="text-[#9A8A78] cursor-pointer hover:text-[#E8C088] disabled:opacity-40 transition-colors" title='Run project' style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties} disabled={!folderPath}>
             <Play size={20} />
           </button>
+          <button onClick={() => window.ipcRenderer.openSettings()} className="text-[#9A8A78] cursor-pointer hover:text-[#E8C088] transition-colors" title='Settings' style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            <Settings size={20} />
+          </button>
           <button 
           onClick={indexProject} 
           disabled={indexing || !folderPath}
@@ -199,6 +220,9 @@ const runProject = async () => {
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <ScanSearch size={20} />
+        </button>
+        <button onClick={() => window.ipcRenderer.openSettings()} className="text-[#9A8A78] cursor-pointer hover:text-[#E8C088] opacity-40 transition-colors">
+          <Settings size={20} />
         </button>
         <button className="text-[#9A8A78] cursor-pointer hover:text-[#E8C088] opacity-40 transition-colors" onClick={hideWindow} style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <Minus size={20}  />

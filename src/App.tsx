@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import './App.css'
 import { X, Plus } from 'lucide-react'
 import Editor from './components/Editor'
@@ -23,9 +23,20 @@ function App() {
   const folderPath = useStore.folderPath((state) => state.folderPath)
   const fileMenuOpen = useStore.fileMenuOpen((state) => state.fileMenuOpen)
   const files = useStore.setFiles((state) => state.files)
+  const unsavedFiles = useStore.unsavedFiles((state) => state.unsavedFiles)
 
   const isResizing = useRef(false)
   const terminalCounter = useRef(1)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoPlaying = useStore.video((state) => state.video)
+  const [videoPath, setVideoPath] = useState<string>('/Chillhop_White_Oak.mp4')
+
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (videoPlaying) v.play().catch(() => {})
+    else v.pause()
+  }, [videoPlaying, videoPath])
 
   const activeTab = openTabs.find(t => t.path === activeTabPath) ?? null
 
@@ -78,6 +89,8 @@ function App() {
         remaining.length > 0 ? remaining[remaining.length - 1].path : ''
       )
     }
+    const currentUnsaved = useStore.unsavedFiles.getState().unsavedFiles
+    useStore.unsavedFiles.getState().setUnsavedFiles(currentUnsaved.filter(p => p !== path))
   }
 
   useEffect(() => {
@@ -131,25 +144,73 @@ function App() {
         else if (sm) togglePanel({ panel: 'search' })
         else if (tl) togglePanel({ panel: 'task-list' })
         else if (lp) togglePanel({ panel: 'langPackPanel' })
+      else {
+      togglePanel({ panel: 'file-explorer' })
+      } 
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [addTerminal, togglePanel])
 
-  const saveFile = async (path: string, content: string): Promise<string> => {
-    const lintOutput = await window.ipcRenderer.writeFile(path, content)
-    const lines = lintOutput.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-    useStore.problems.getState().setProblems(lines)
-    if (lines.length > 0) {
-      useStore.terminalOpen.getState().setTerminalOpen(true)
-      useStore.activeBottomSection.getState().setActiveBottomSection('problems')
-    }
-    return lintOutput
+  const saveFile = async (path: string, content: string): Promise<void> => {
+    const formatted = await window.ipcRenderer.writeFile(path, content)
+
+    const currentTabs = useStore.openTabs.getState().openTabs
+    useStore.openTabs.getState().setOpenTabs(
+      currentTabs.map(t => t.path === path ? { ...t, content: formatted } : t)
+    )
+
+    const currentUnsaved = useStore.unsavedFiles.getState().unsavedFiles
+    useStore.unsavedFiles.getState().setUnsavedFiles(currentUnsaved.filter(p => p !== path))
   }
 
+  useEffect(() => {
+    const handler = (_: unknown, { filePath, output }: { filePath: string; output: string }) => {
+      const lines = output.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0)
+      const activeTabPathNow = useStore.activeTabPath.getState().activeTabPath
+      if (filePath === activeTabPathNow) {
+        useStore.problems.getState().setProblems(lines)
+        if (lines.length > 0) {
+          useStore.terminalOpen.getState().setTerminalOpen(true)
+          useStore.activeBottomSection.getState().setActiveBottomSection('problems')
+        }
+      }
+    }
+    window.ipcRenderer.on('diagnostics:result', handler)
+    return () => { window.ipcRenderer.off('diagnostics:result', handler) }
+  }, [])
+  const quotes = ["You're Editor should understand what you're building.", "Your editor should adapt to you. Not the other way around.", "Your editor should understand what you're building,not just what you're typing."]
+  const quote = quotes[Math.floor(Math.random() * quotes.length)]
+
+  useEffect(() => {
+    async function loadVideo() {
+      const activeThemeId = await window.ipcRenderer.getActiveTheme()
+      if (!activeThemeId) return
+      console.log('Active theme ID:', activeThemeId)
+      const theme = await window.ipcRenderer.getSpecificTheme(activeThemeId)
+      console.log('Loaded theme Video:', theme?.video)
+      if (theme?.video) setVideoPath(theme.video as string)
+        console.log('Video path set to:', videoPath)
+    }
+    loadVideo()
+  }, [])
+
   return (
-    <div className="h-screen w-screen bg-[#0F0B08] text-white overflow-hidden flex flex-col">
+    <div className="relative h-screen w-screen overflow-hidden">
+      {/* Video */}
+      <video
+        ref={videoRef}
+        src={videoPath || '/Chillhop_White_Oak.mp4'}
+        loop
+        muted
+        onLoadedData={() => { if (videoPlaying) videoRef.current?.play().catch(() => {}) }}
+        onError={() => { if (videoPath !== '/Chillhop_White_Oak.mp4') setVideoPath('/Chillhop_White_Oak.mp4') }}
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ opacity: 0.15, zIndex: 0 }}
+      />  
+      {/* Content */}
+    <div className="h-screen w-screen   text-white overflow-hidden flex flex-col">
 
       <Titlebar />
       <div className="absolute top-40 left-1/2  z-50">
@@ -165,21 +226,23 @@ function App() {
 
           {/* Tab bar */}
           {openTabs.length > 0 && (
-            <div className="flex flex-row overflow-x-auto flex-shrink-0 border-b border-b-[#3D3020] bg-[#1A1208]" style={{ scrollbarWidth: 'none' }}>
+            <div className="flex flex-row overflow-x-auto shrink-0 border-b border-b-[#3D3020] bg-[#1A1208]" style={{ scrollbarWidth: 'none' }}>
               {openTabs.map(tab => (
                 <div
                   key={tab.path}
                   onClick={() => useStore.activeTabPath.getState().setActiveTabPath(tab.path)}
-                  className={`flex items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer flex-shrink-0 border-r border-r-[#3D3020] group transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer shrink-0 border-r border-r-[#3D3020] group transition-colors ${
                     tab.path === activeTabPath
                       ? 'text-[#E8C088] bg-[#0F0B08] border-t border-t-[#E8C088]'
                       : 'text-[#6B5D4A] hover:text-[#9A8A78] hover:bg-[#16110D]'
                   }`}
                 >
                   <span className="truncate max-w-32">{tab.name}</span>
+                  
+                  {unsavedFiles.includes(tab.path) && <div className="rounded-[100px] bg-[#E8C088] w-2 h-2"></div>}
                   <button
                     onClick={e => handleCloseTab(tab.path, e)}
-                    className="opacity-0 group-hover:opacity-100 hover:text-[#E8C088] transition-opacity flex-shrink-0 cursor-pointer"
+                    className="opacity-0 group-hover:opacity-100 hover:text-[#E8C088] transition-opacity shrink-0 cursor-pointer"
                   >
                     <X size={10} />
                   </button>
@@ -195,20 +258,22 @@ function App() {
                 fileName={activeTab.name}
                 filePath={activeTab.path}
                 onSave={(content) => saveFile(activeTab.path, content)}
-                onLintResult={(output) => {
-                  if (output.trim()) {
-                    useStore.terminalOpen.getState().setTerminalOpen(true)
-                    useStore.activeBottomSection.getState().setActiveBottomSection('problems')
-                  }
-                }}
               />
             ) : (
-              <div className="h-full flex items-center justify-center flex-col gap-2">
+              <>
+              {
+                folderPath ? (<div className="h-full flex items-center justify-center flex-col gap-2">
                 <p className="text-[#3D3020] text-[12px]">Open a file to start editing</p>
-                <p className="text-[#2a2018] text-[10px]">Your editor should understand what you're building</p>
-              </div>
+                <p className="text-[#2a2018] text-[10px]">{quote}</p>
+              </div>) : (<div className="h-full flex items-center justify-center flex-col gap-2">
+                <p className="text-[#3D3020] text-[12px]">Open a folder to start editing</p>
+                <p className="text-[#2a2018] text-[10px]">{quote}</p>
+              </div>)
+              }</>
+              
             )}
           </div>
+          {/* Terminal */}
 
           {terminalOpen && (
             <div className="flex flex-col flex-shrink-0 border-t-2 border-t-[#3D3020]" style={{ height: terminalHeight }}>
@@ -318,6 +383,8 @@ function App() {
       {fileMenuOpen && (
         <div className="fixed inset-0 z-40" onClick={() => useStore.fileMenuOpen.getState().setFileMenuOpen(false)} />
       )}
+    </div>
+    {/* bg with no vid is supposed to be:- bg-[#0F0B08] */}
     </div>
   )
 }

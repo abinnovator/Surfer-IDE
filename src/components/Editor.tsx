@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { codeToHtml } from 'shiki'
 import { useStore } from '../../lib/zustand'
+import toast from 'react-hot-toast'
 
 const LANG_MAP: Record<string, string> = {
   ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx',
@@ -13,17 +14,18 @@ interface Props {
   content: string
   fileName: string
   filePath: string
-  onSave?: (content: string) => Promise<string> | void
-  onLintResult?: (output: string) => void
+  onSave?: (content: string) => Promise<void> | void
 }
 
-export default function Editor({ content: initialContent, fileName, onSave, onLintResult }: Props) {
+export default function Editor({ content: initialContent, fileName, filePath, onSave }: Props) {
   const setCursorPosition = useStore.filePosition(state => state.setCursorPosition)
+  const folderPath = useStore.folderPath(state => state.folderPath)
   const [lineCount, setLineCount] = useState(() => initialContent.split('\n').length)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
   const lineNumbersRef = useRef<HTMLDivElement>(null)
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const highlightId = useRef(0)
   const prevLineCount = useRef(initialContent.split('\n').length)
 
   const ext = fileName.split('.').pop() || 'txt'
@@ -40,19 +42,21 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
     setLineCount(count)
 
     if (highlightTimer.current) clearTimeout(highlightTimer.current)
+    const id = ++highlightId.current
     codeToHtml(initialContent, { lang, theme: 'github-dark' }).then(html => {
-      if (preRef.current) preRef.current.innerHTML = html
+      if (highlightId.current === id && preRef.current) preRef.current.innerHTML = html
     })
   }, [initialContent, fileName, lang])
 
   const scheduleHighlight = useCallback(() => {
     if (highlightTimer.current) clearTimeout(highlightTimer.current)
     highlightTimer.current = setTimeout(() => {
+      const id = ++highlightId.current
       const val = textareaRef.current?.value ?? ''
       codeToHtml(val, { lang, theme: 'github-dark' }).then(html => {
         const pre = preRef.current
         const ta = textareaRef.current
-        if (!pre) return
+        if (!pre || highlightId.current !== id) return
         const scrollTop = ta?.scrollTop ?? 0
         const scrollLeft = ta?.scrollLeft ?? 0
         pre.innerHTML = html
@@ -72,8 +76,14 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
       prevLineCount.current = newCount
       setLineCount(newCount)
     }
+
+    const unsaved = useStore.unsavedFiles.getState().unsavedFiles
+    if (!unsaved.includes(filePath)) {
+      useStore.unsavedFiles.getState().setUnsavedFiles([...unsaved, filePath])
+    }
+
     scheduleHighlight()
-  }, [scheduleHighlight])
+  }, [scheduleHighlight, filePath])
 
   const handleScroll = useCallback(() => {
     const ta = textareaRef.current
@@ -100,8 +110,10 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
 
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault()
-      const result = await onSave?.(ta.value)
-      if (result !== undefined) onLintResult?.(result)
+      useStore.unsavedFiles.getState().setUnsavedFiles(
+        useStore.unsavedFiles.getState().unsavedFiles.filter(p => p !== filePath)
+      )
+      await onSave?.(ta.value)
       return
     }
 
@@ -115,6 +127,34 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
       scheduleHighlight()
       return
     }
+    if (e.key === '>') {
+    const before = val.substring(0, start)
+    const tagMatch = before.match(/<([a-zA-Z0-9-]+)([^>]*)$/)
+    const selfClosing = ['img', 'input', 'br', 'hr', 'link', 'meta', 'area', 'base', 'col', 'embed', 'param', 'source', 'track', 'wbr']
+    
+    if (tagMatch && !selfClosing.includes(tagMatch[1].toLowerCase())) {
+      e.preventDefault()
+      const tagName = tagMatch[1]
+      const closing = `></${tagName}>`
+      const next = val.substring(0, start) + closing + val.substring(end)
+      
+      ta.value = next
+      
+      requestAnimationFrame(() => {
+        ta.selectionStart = start + 1
+        ta.selectionEnd = start + 1
+      })
+      
+      if (preRef.current) preRef.current.textContent = next
+      scheduleHighlight()
+
+      const unsaved = useStore.unsavedFiles.getState().unsavedFiles
+      if (!unsaved.includes(filePath)) {
+        useStore.unsavedFiles.getState().setUnsavedFiles([...unsaved, filePath])
+      }
+    }
+    return
+  }
 
     const pairs: Record<string, string> = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" }
     if (pairs[e.key]) {
@@ -126,7 +166,41 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
       if (preRef.current) preRef.current.textContent = next
       scheduleHighlight()
     }
-  }, [onSave, scheduleHighlight])
+    if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+      e.preventDefault()
+      const cursorPosition = {
+        line: ta.value.substring(0, ta.selectionStart).split('\n').length,
+        column: ta.selectionStart - ta.value.lastIndexOf('\n', ta.selectionStart - 1),
+      }
+      window.ipcRenderer.getToken().then(token => {
+        if (!token) {
+          toast.error('No token stored — add your token in settings', { style: { background: '#1E1710', color: '#E8C088' } })
+          return
+        }
+        return window.ipcRenderer.getInlineSuggestion({
+          filePath,
+          fileContent: ta.value,
+          token,
+          cursorPosition,
+          workspaceRoot: folderPath || undefined,
+        })
+      }).then(result => {
+        if (!result) return
+        if (result.error) {
+          toast.error(result.error, { style: { background: '#1E1710', color: '#E8C088' } })
+          return
+        }
+        if (!result.suggestion) return
+        const currentStart = ta.selectionStart
+        const next = ta.value.substring(0, currentStart) + result.suggestion + ta.value.substring(currentStart)
+        ta.value = next
+        ta.selectionStart = currentStart + result.suggestion.length
+        ta.selectionEnd = currentStart + result.suggestion.length
+        if (preRef.current) preRef.current.textContent = next
+        scheduleHighlight()
+      })
+    }
+  }, [onSave, scheduleHighlight, filePath, folderPath])
 
   const sharedStyle: React.CSSProperties = {
     fontFamily: '"Geist Mono", monospace',
@@ -167,7 +241,6 @@ export default function Editor({ content: initialContent, fileName, onSave, onLi
 
       {/* editor */}
       <div className="flex-1 relative overflow-hidden">
-        {/* highlight layer — owned by direct DOM writes, not React state */}
         <pre
           ref={preRef}
           style={{

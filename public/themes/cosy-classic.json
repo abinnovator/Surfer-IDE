@@ -1,0 +1,44 @@
+{
+  "id": "cosy-classic",
+  "name": "Cosy Classic",
+  "description": "Cosy and warm with a classic feel, fireplace video",
+  "preview": "#1e1e1e",
+  "video": "/Chillhop_White_oak.mp4",
+  "colors": {
+    "editor": {
+        "background": "#0F0B08",
+        "pre-highlight": "#d4d4d4",
+        "line-numbers": "#7a6a58"
+    },
+    "left-sidebar": {
+        "icon-color": "#9A8A78",
+        "icon-hover-color": "#E8C088",
+        "icon-hover-background": "#3D3020",
+        "border": "#3D3020"
+    },
+    "ai-chat": {
+        "border": "#3D3020",
+        "background": "#16110B",
+        "input-background": "#3d3020",
+        "sign-in-button-background": "#E8C088",
+        "Heading-color": "#E8C088",
+        "input-text-color": "#675D49"
+    },
+    "title-bar": {
+        "background": "#1E1710",
+        "title-text-color": "#E8C088",
+        "file-menu-background": "#1E1710",
+        "file-menu-border": "#3D3020",
+        "file-menu-item-hover-background": "#3D3020",
+        "file-menu-item-hover-text-color": "#E8C088",
+        "file-menu-item-text-color": "#9A8A78",
+        "right-buttons-color": "#9A8A78",
+        "right-buttons-hover-color": "#E8C088"
+    },
+    "status-bar": {
+        "background": "#1E1710",
+        "text-color": "#9A8A78",
+        "border": "#3D3020"
+    }
+  }
+}

@@ -54,4 +54,12 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   checkIfIndexExists: (workspaceRoot: string) => ipcRenderer.invoke('check-if-index-exists', workspaceRoot),
   runCommand: (folderPath: string, command: string) => ipcRenderer.invoke('run-command', folderPath, command),
   getIndex: (workspaceRoot: string) => ipcRenderer.invoke('get-index', workspaceRoot),
+  getInlineSuggestion: (payload: { filePath: string, fileContent: string, token: string, cursorPosition: { line: number, column: number }, workspaceRoot?: string, packId?: string }) => ipcRenderer.invoke('ai:get-inline-suggestion', payload),
+  createWindow: () => ipcRenderer.invoke('create-window'),
+  openSettings: () => ipcRenderer.invoke('window:open-settings'),
+  createTheme: (themeData: {id: string, name: string, colors: {background: string, titlebar: string, sidebar: string, border: string, accent: string,text: string, textMuted: string, textDim: string,}, videoUrl: string}, workspaceRoot: string) => ipcRenderer.invoke('create-theme', themeData, workspaceRoot),
+  closeSettingsWindow: () => ipcRenderer.invoke('settings-window: close'),
+  openDevTools: () => ipcRenderer.invoke('dev:open-devtools'),
+  getSpecificTheme: (themeId: string) => ipcRenderer.invoke('get-specific-theme', themeId),
+  getActiveTheme: () => ipcRenderer.invoke('get-active-theme-id'),
 })

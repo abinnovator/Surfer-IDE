@@ -3,13 +3,6 @@ import { useStore } from '../../lib/zustand'
 import { cn } from '../../lib/utils'
 
 
-const fileItem = (file: any) => {
-    return (
-        <div className="flex items-center p-2 hover:bg-[#1A1208] cursor-pointer rounded-md">
-            {file.name}
-        </div>
-    )
-}
 
 const QuickFileMenu = () => {
     const actionMenu = useStore.actionMenu((state) => state.actionMenuOpen)

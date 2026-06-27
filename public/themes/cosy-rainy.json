@@ -1,0 +1,44 @@
+{
+  "id": "rainy",
+  "name": "Rainy Day",
+  "description": "Dark and moody with rain ambiance",
+  "preview": "#0a0e14",
+  "video": "/Rainy_Day.mp4",
+  "colors": {
+    "editor": {
+      "background": "#0a0e14",
+      "pre-highlight": "#b0bec5",
+      "line-numbers": "#4a5568"
+    },
+    "left-sidebar": {
+      "icon-color": "#546e7a",
+      "icon-hover-color": "#80cbc4",
+      "icon-hover-background": "#1a2332",
+      "border": "#1a2332"
+    },
+    "ai-chat": {
+      "border": "#1a2332",
+      "background": "#0d1117",
+      "input-background": "#1a2332",
+      "sign-in-button-background": "#80cbc4",
+      "Heading-color": "#80cbc4",
+      "input-text-color": "#546e7a"
+    },
+    "title-bar": {
+      "background": "#0d1117",
+      "title-text-color": "#80cbc4",
+      "file-menu-background": "#0d1117",
+      "file-menu-border": "#1a2332",
+      "file-menu-item-hover-background": "#1a2332",
+      "file-menu-item-hover-text-color": "#80cbc4",
+      "file-menu-item-text-color": "#546e7a",
+      "right-buttons-color": "#546e7a",
+      "right-buttons-hover-color": "#80cbc4"
+    },
+    "status-bar": {
+      "background": "#0d1117",
+      "text-color": "#546e7a",
+      "border": "#1a2332"
+    }
+  }
+}
