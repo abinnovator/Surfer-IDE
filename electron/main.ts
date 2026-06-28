@@ -667,7 +667,8 @@ ipcMain.handle('git:commit-changes', async (_, workspaceRoot: string, message: s
     const git = simpleGit(workspaceRoot);
     await git.add('.');
     const commitSummary = await git.commit(message);
-    return { success: true, commitSummary };
+    const gitPush = await git.push();
+    return { success: true, commitSummary, gitPush };
   } catch (error) {
     return { success: false, error: error.message };
   }
