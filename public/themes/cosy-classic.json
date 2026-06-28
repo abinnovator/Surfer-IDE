@@ -8,7 +8,14 @@
     "editor": {
         "background": "#0F0B08",
         "pre-highlight": "#d4d4d4",
-        "line-numbers": "#7a6a58"
+        "line-numbers": "#7a6a58",
+        "tabsBackground": "#1a1208",
+        "tabsBorder": "#3D3020",
+        "tabsActiveBackground": "#0F0B08",
+        "tabsActiveTextColor": "#E8C088",
+        "tabsInactiveTextColor": "#6B5D4A",
+        "tabsHoverBackground": "#16110d",
+        "tabsHoverTextColor": "#9A8A78"
     },
     "left-sidebar": {
         "icon-color": "#9A8A78",

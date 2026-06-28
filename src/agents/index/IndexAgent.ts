@@ -3,7 +3,21 @@ import { getGroqModel } from '../groqProvider'
 import fs from 'fs'
 import path from 'path'
 
-const IGNORED = ['node_modules', '.git', 'dist', '.next', 'out', '.surfer']
+const IGNORED = [
+  'node_modules', '.git', 'dist', '.next', '.surfer',
+  'dist-electron',  // electron build output
+  'release',        // electron-builder output
+  'out',            // another common build output
+  '.vite',          // vite cache
+  'build',          // generic build folder
+  '.cache',         // various tool caches
+  '.turbo',         // turborepo
+  '.vercel',        // vercel output
+  '__pycache__',    // python
+  '.pytest_cache',  // python
+  'target',         // rust
+  'vendor',         // php/go
+]
 const SUPPORTED_EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'py', 'cs', 'gd', 'rs', 'go', 'java', 'json', 'md', 'html', 'css', 'toml', 'yaml']
 function detectStartCommand(workspaceRoot: string): string {
   const packageJsonPath = path.join(workspaceRoot, 'package.json')

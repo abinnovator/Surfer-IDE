@@ -1,9 +1,39 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { X } from 'lucide-react'
+import { Button } from "../components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu"
+import ThemesDropdown from './ThemesDropdown'
 
 const Settings = () => {
   const [activeSection, setActiveSection] = React.useState<'General' | 'Editor' | 'AI'>('General')
+  const [themes, setThemes] = React.useState<any[]>([])
+  const [activeThemeId, setActiveThemeId] = React.useState<string>('')
   const closeWindow = () => (window as any).ipcRenderer.closeSettingsWindow()
+  useEffect(() => {
+    function getThemes() {
+      (window as any).ipcRenderer.getAllThemes().then((themes: any) => {
+        console.log('themes', themes)
+        setThemes(themes)
+      })
+    }
+    getThemes()
+    function getActiveTheme() {
+      (window as any).ipcRenderer.getActiveTheme().then((activeThemeId: string) => {
+        console.log('activeThemeId', activeThemeId)
+        setActiveThemeId(activeThemeId)
+      })
+    }
+    getActiveTheme()
+  }, [])
+  
 
   return (
     <div className="h-screen w-screen bg-[#0F0B08] text-white flex flex-col overflow-hidden">
@@ -53,10 +83,31 @@ const Settings = () => {
 
         {/* Content area */}
         <main className="flex-1 overflow-y-auto p-6">
-          {/* Add setting panels here */}
+            <div>
+              <h2 className="text-lg font-semibold mb-4">General Settings</h2>
+              {themes && themes.length > 0 ? (
+                <div>
+                  <h3 className="text-md font-semibold mb-2">Available Themes</h3>
+                  <ThemesDropdown themes={themes} activeThemeId={activeThemeId} />
+                </div>
+              ): 'No themes available.'}
+            </div>
+          {activeSection === 'Editor' && (
+            <div>
+              <h2 className="text-lg font-semibold mb-4">Editor Settings</h2>
+              {/* Add editor settings controls here */}
+            </div>
+          )}
+          {activeSection === 'AI' && (
+            <div>
+              <h2 className="text-lg font-semibold mb-4">AI Settings</h2>
+              {/* Add AI settings controls here */}
+            </div>
+          )}
         </main>
       </div>
-    </div>
+
+      </div>
   )
 }
 

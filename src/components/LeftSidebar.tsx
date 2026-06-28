@@ -1,5 +1,5 @@
-import { Files, Search, GitGraph, List, Package, ChevronDown, ChevronRight, Folder, FolderOpen, File } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { Files, Search, GitGraph, List, Package, ChevronDown, ChevronRight, Folder, FolderOpen, File, Send } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import TaskList from '../TaskList'
 import LangPackCard from './LangPackCard'
 import { useStore, FileEntry } from '../../lib/zustand'
@@ -169,6 +169,10 @@ const LeftSidebar = () => {
     const [rootCreatingFile, setRootCreatingFile] = useState(false)
     const [rootCreatingFolder, setRootCreatingFolder] = useState(false)
     const [rootInputName, setRootInputName] = useState('')
+    const [gitExists, setGitExists] = useState(false)
+    const [gitChanges, setGitChanges] = useState({isClean: true, ahead: 0, behind: 0, currentBranch: '', changes: [] as any[]})
+    console.log(folderPath)
+    const [commitMessage, setCommitMessage] = useState('')
 
     const handleToggleFolder = async (entry: FileEntry) => {
       if (entry.isOpen) {
@@ -232,6 +236,18 @@ const LeftSidebar = () => {
         }
       }, [])
 
+      useEffect(() => {
+        if (folderPath) {
+          ;(window as any).ipcRenderer.checkGitExists(folderPath).then((exists: boolean) => {
+            setGitExists(exists)
+          })
+          ;(window as any).ipcRenderer.checkGitStatus(folderPath).then((changes: any) => {
+            setGitChanges(changes)
+          })
+        }
+      }, [folderPath])
+
+
 
   return (
     <div className="flex flex-row shrink-0 overflow-hidden">
@@ -253,12 +269,12 @@ const LeftSidebar = () => {
               </button>
             </div>
     
-            {/* File tree */}
+            {/* Tree of the files */}
             <div className="flex flex-col bg-[#16110D] w-52 border-r-2 border-r-[#3D3020] flex-shrink-0" hidden={!fileExplorerOpen}>
               <div className="px-3 py-2.5 border-b border-b-[#3D3020] flex-shrink-0">
                 <h1 className="text-[#363636] text-[11px] uppercase tracking-widest">{folderName ? folderName : 'No folder Opened'}</h1>
               </div>
-              {/* scrollable file list */}
+              {/* File list hmmmm sounds tasty */}
               <ContextMenu>
                 <ContextMenuTrigger className="flex-1 flex flex-col overflow-hidden">
                   <div className="flex flex-col py-2 gap-0.5 overflow-y-auto flex-1">
@@ -314,7 +330,7 @@ const LeftSidebar = () => {
               </ContextMenu>
             </div>
     
-            {/* Search Menu */}
+            {/* Search Manu */}
             <div className="flex flex-col bg-[#16110D] w-52 border-r-2 border-r-[#3D3020] flex-shrink-0" hidden={!searchMenuOpen}>
               <div className="px-3 py-2.5 border-b border-b-[#3D3020] flex items-center justify-between">
                 <h1 className="text-[#363636] text-[11px] uppercase tracking-widest">Search</h1>
@@ -325,10 +341,40 @@ const LeftSidebar = () => {
               </div>
             </div>
     
-            {/* Git Menu */}
+            {/* Git Menu -gity gity git */}
             <div className="flex flex-col bg-[#16110D] w-52 border-r-2 border-r-[#3D3020] flex-shrink-0" hidden={!gitMenuOpen}>
               <div className="px-3 py-2.5 border-b border-b-[#3D3020] flex items-center justify-between">
                 <h1 className="text-[#363636] text-[11px] uppercase tracking-widest">Source Control</h1>
+              </div>
+              <div className="flex flex-col gap-2">
+                {folderPath ? (
+                  <p className="text-[10px] text-[#9A8A78] px-2 py-1">{gitExists ? (gitChanges.changes.length === 0 ? 'No changes to commit' : `You have ${gitChanges.changes.length} uncommitted changes`) : 'No Git repository found'}</p>
+                ) : (
+                  <p className="text-[10px] text-[#9A8A78] px-2 py-1">Please open a folder to view Git status.</p>
+                )}
+                <div className="px-2 flex flex-row gap-2">
+                  <input type="text" placeholder="Commit message..." className="bg-[#3D3020] text-[#ffffff] max-w-9/10 w-full py-1.5 text-[8px] px-2 rounded-sm focus:outline-none" disabled={!folderPath || !gitExists || gitChanges.changes.length === 0} onChange={(e) => setCommitMessage(e.target.value)} value={commitMessage} />
+                  <button
+                  className="bg-[#3D3020] hover:bg-[#4D4030] text-[#E8C088] px-2 rounded-sm disabled:opacity-40 cursor-pointer transition-colors"
+                  onClick={async () => {
+                    if (folderPath && gitExists && commitMessage.trim()) {
+                      await (window as any).ipcRenderer.commitToGit(folderPath, commitMessage.trim())
+                    }
+                  }}
+                >
+                  <Send size={10} />
+                </button>
+                </div>
+                <div className="flex flex-col gap-2 px-2 max-h-9/12 overflow-y-scroll">
+                  {folderPath && gitExists && gitChanges.changes.length > 0 ? (
+                    gitChanges.changes.map((change) => (
+                      <div key={change.path} className="flex items-center gap-2 px-2 py-1 bg-[#3D3020] rounded">
+                        <span className="text-[#9A8A78] text-[10px] truncate">{change.file}</span>
+                        <span className="text-[#9A8A78] text-[10px]">{change.status}</span>
+                      </div>
+                    ))
+                  ) : null}
+                </div>
               </div>
             </div>
             {/* Task Menu */}

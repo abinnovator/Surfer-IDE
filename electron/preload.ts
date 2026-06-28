@@ -62,4 +62,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   openDevTools: () => ipcRenderer.invoke('dev:open-devtools'),
   getSpecificTheme: (themeId: string) => ipcRenderer.invoke('get-specific-theme', themeId),
   getActiveTheme: () => ipcRenderer.invoke('get-active-theme-id'),
+  getAllThemes: () => ipcRenderer.invoke('get-all-themes'),
+  updateActiveTheme: (id: string) => ipcRenderer.invoke('update-active-theme-id', id),
+  commitToGit: (workspaceRoot: string, message: string) => ipcRenderer.invoke('git:commit-changes', workspaceRoot, message),
+  checkGitStatus: (workspaceRoot: string) => ipcRenderer.invoke('git:get-uncommitted-changes', workspaceRoot),
+  checkGitExists: (workspaceRoot: string) => ipcRenderer.invoke('git:check-exists', workspaceRoot),
 })

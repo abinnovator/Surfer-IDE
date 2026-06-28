@@ -30,6 +30,7 @@ function App() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const videoPlaying = useStore.video((state) => state.video)
   const [videoPath, setVideoPath] = useState<string>('/Chillhop_White_Oak.mp4')
+  const themeObject = useStore.theme((state) => state.theme)
 
   useEffect(() => {
     const v = videoRef.current
@@ -195,6 +196,17 @@ function App() {
     }
     loadVideo()
   }, [])
+  useEffect(() => {
+    async function loadStyles() {
+      const activeThemeId = await window.ipcRenderer.getActiveTheme()
+      if (!activeThemeId) return
+      const theme = await window.ipcRenderer.getSpecificTheme(activeThemeId)
+      useStore.theme.getState().setTheme(theme)
+    }
+    loadStyles()
+  }, [])
+    
+
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
@@ -222,7 +234,7 @@ function App() {
         <LeftSidebar />
 
         {/* Editor area */}
-        <div className="flex-1 bg-[#0F0B08] overflow-hidden flex flex-col">
+        <div className={`flex-1 bg-[#0F0B08] overflow-hidden flex flex-col`}>
 
           {/* Tab bar */}
           {openTabs.length > 0 && (
@@ -233,8 +245,8 @@ function App() {
                   onClick={() => useStore.activeTabPath.getState().setActiveTabPath(tab.path)}
                   className={`flex items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer shrink-0 border-r border-r-[#3D3020] group transition-colors ${
                     tab.path === activeTabPath
-                      ? 'text-[#E8C088] bg-[#0F0B08] border-t border-t-[#E8C088]'
-                      : 'text-[#6B5D4A] hover:text-[#9A8A78] hover:bg-[#16110D]'
+                      ? `text-${themeObject?.colors?.editor?.tabsActiveTextColor || '#E8C088'} bg-[${themeObject?.colors?.editor?.tabsActiveBackground || '#0F0B08'}] border-t border-t-[${themeObject?.colors?.editor?.tabsBorder || '#E8C088'}]`
+                      : `text-${themeObject?.colors?.editor?.tabsInactiveTextColor || '#6B5D4A'} hover:text-${themeObject?.colors?.editor?.tabsHoverTextColor || '#9A8A78'} hover:bg-[${themeObject?.colors?.editor?.tabsHoverBackground || '#16110D'}]`
                   }`}
                 >
                   <span className="truncate max-w-32">{tab.name}</span>

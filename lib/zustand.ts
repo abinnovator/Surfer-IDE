@@ -134,6 +134,10 @@ const video = create<{ video: boolean; setVideo: (video: boolean) => void }>((se
     video: true,
     setVideo: (video) => set({ video })
 }))
+const theme = create<{ theme: string | null; setTheme: (theme: string) => void }>((set) => ({
+    theme: null,
+    setTheme: (theme) => set({ theme })
+}))
 export const useStore =  {
     fileMenuOpen,
     fileExplorerOpen,
@@ -162,5 +166,6 @@ export const useStore =  {
     timeTracked,
     filePosition,
     unsavedFiles,
-    video
+    video,
+    theme
 }

@@ -31,7 +31,7 @@ let settingsWin: BrowserWindow | null = null
 const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash'
 let ptyProcess: any = null
 const tokenPath = path.join(app.getPath('userData'), 'token.enc')
-
+// In dev stuff
 ipcMain.handle('ai:get-inline-suggestion', async (_, payload: {
   filePath: string
   fileContent: string
@@ -117,6 +117,7 @@ ipcMain.handle('ai:get-inline-suggestion', async (_, payload: {
     await pool.end()
   }
 })
+// Terminal
 ipcMain.handle('terminal:create', async (_, workspaceRoot: string) => {
   const pty = await import('node-pty')
   if (ptyProcess) {
@@ -161,7 +162,7 @@ ipcMain.handle('terminal:run', async (_, cwd: string, command: string) => {
   ptyProcess.write(`${command}\r`)
 })
 
-
+// AI stuff
 ipcMain.handle('store-token', (_, token: string) => {
   const encrypted = safeStorage.encryptString(token)
   fs.writeFileSync(tokenPath, encrypted)
@@ -299,7 +300,7 @@ ipcMain.handle('project:index', async (event, workspaceRoot: string) => {
   return index
 })
 
-
+// FIle shit
 ipcMain.handle('open-folder', async () => {
   const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
   if (result.canceled) return null
@@ -409,7 +410,6 @@ ipcMain.handle('write-file', async (_, filePath: string, content: string) => {
     fs.writeFileSync(filePath, formatted, 'utf-8')
   }
 
-  // Run diagnostics async so the editor can reload the formatted file immediately
   getDiagnostics(filePath).then(output => {
     win?.webContents.send('diagnostics:result', { filePath, output })
   })
@@ -421,10 +421,14 @@ ipcMain.handle('lint-file', async (_, filePath: string) => {
   return getDiagnostics(filePath)
 })
 
+// tasks 
 
 ipcMain.handle('task:get-tasks', async () => {})
 ipcMain.handle('task:create-task', async () => {})
 ipcMain.handle('task:update-task', async () => {})
+
+
+// Pack shit
 
 ipcMain.handle('get-packs', async () => {
   const res = await fetch('https://surfer.aaditbhambri.com/api/packs')
@@ -464,6 +468,8 @@ ipcMain.handle('get-installed-pack-details', async (_, packId:string, workspaceR
   console.log(content)
   return content
 })
+
+// Window stuff
 ipcMain.handle('settings-window: close', () => {
   if (settingsWin) {
     settingsWin.close()
@@ -478,6 +484,8 @@ ipcMain.handle('window:maximize', () => {
 ipcMain.handle('window:close', () => win?.close())
 ipcMain.handle('window:is-maximized', () => win?.isMaximized())
 ipcMain.handle("window:hide", () => win?.minimize())
+
+// Indexing stuff
 
 ipcMain.handle('read-all-files', async (_, dirPath: string) => {
   const ignored = ['node_modules', '.git', 'dist', '.next', '.surfer']
@@ -518,6 +526,7 @@ ipcMain.handle('get-index', async (_, workspaceRoot: string) => {
   const content = fs.readFileSync(indexPath, 'utf-8')
   return JSON.parse(content)
 })
+// Window shit
 ipcMain.handle('create-window', async () => {
   createWindow()
 })
@@ -547,6 +556,8 @@ ipcMain.handle('window:open-settings', () => {
     settingsWin.loadFile(path.join(RENDERER_DIST, 'index.html'), { hash: 'settings' })
   }
 })
+
+// Theme shit
 ipcMain.handle('create-theme', async (_, themeData: {id: string, name: string, colors: {background: string, titlebar: string, sidebar: string, border: string, accent: string,text: string, textMuted: string, textDim: string,}, videoUrl: string}, workspaceRoot: string) => {
   const themesDir = path.join(workspaceRoot, '.surfer', 'themes')
   if (!fs.existsSync(themesDir)) fs.mkdirSync(themesDir, { recursive: true })
@@ -562,6 +573,12 @@ ipcMain.handle('get-specific-theme', (_, id: string) => {
 ipcMain.handle('get-active-theme-id', () => {
   return getActiveThemeID()
 })
+ipcMain.handle('update-active-theme-id', (_, id: string) => {
+  updateActiveThemeID(id)
+})
+ipcMain.handle('get-all-themes', () => {
+  return getAllThemes()
+})
 function getSpecificTheme(id: string): Record<string, unknown> | null {
   const themePath = path.join(process.env.VITE_PUBLIC, 'themes', `${id}.json`)
   if (!fs.existsSync(themePath)) return null
@@ -574,6 +591,87 @@ function getActiveThemeID(): string | null {
   const content = fs.readFileSync(themePath, 'utf-8')
   return (JSON.parse(content) as { activeTheme: string }).activeTheme
 }
+function updateActiveThemeID(id: string): void {
+  const themePath = path.join(process.env.VITE_PUBLIC, 'themes', 'index.json')
+  const existing = fs.existsSync(themePath) ? JSON.parse(fs.readFileSync(themePath, 'utf-8')) : {}
+  fs.writeFileSync(themePath, JSON.stringify({ ...existing, activeTheme: id }, null, 2))
+}
+function getAllThemes() {
+  const themesDir = path.join(process.env.VITE_PUBLIC, 'themes','index.json')
+  if (!fs.existsSync(themesDir)) return []
+  const content = fs.readFileSync(themesDir, 'utf-8')
+  const parsedContent =  JSON.parse(content).themes;
+  return parsedContent
+}
+
+
+// Source control stuff oh god ts gonna be annoying
+async function getGitExists(workspaceRoot: string): Promise<{ there: boolean; reason?: string, remoteUrl?: string} > {
+  const {simpleGit} = await import('simple-git')
+  try {
+    const folderPath = path.join(workspaceRoot, '.git')
+    const getDirExists = fs.existsSync(folderPath)
+    if (!getDirExists) {
+      return { there: false, reason: 'No .git folder found' }
+    }
+    const git = simpleGit(workspaceRoot)
+    // check if folder has remote links adskads
+    const remotes = await git.getRemotes(true);
+    const origin = remotes.find(r => r.name === 'origin');
+
+    if (!origin || !origin.refs.fetch) {
+      return { there: false, reason: 'No remote origin configuration found' };
+    }
+    return { 
+      there: true, 
+      remoteUrl: origin.refs.fetch 
+    };
+    
+
+  } catch (error) {
+    return { there: false, reason: 'Error occurred while checking for .git folder' }
+  }
+
+}
+ipcMain.handle('git:check-exists', async (_, workspaceRoot: string) => {
+  return await getGitExists(workspaceRoot)
+})
+ipcMain.handle('git:get-uncommitted-changes', async (_, workspaceRoot: string) => {
+  const {simpleGit} = await import('simple-git')
+   try {
+    const git = simpleGit(workspaceRoot);
+    const status = await git.status();
+
+    const changes = [
+      ...status.not_added.map(file => ({ file, status: 'untracked' })),
+      ...status.modified.map(file => ({ file, status: 'modified' })),
+      ...status.created.map(file => ({ file, status: 'created' })),
+      ...status.deleted.map(file => ({ file, status: 'deleted' })),
+      ...status.renamed.map(file => ({ file, status: 'renamed' }))
+    ];
+
+    return {
+      isClean: status.isClean(),
+      ahead: status.ahead,
+      behind: status.behind,
+      currentBranch: status.current,
+      changes // Array of { file, status }
+    };
+  } catch (error) {
+    return { error: error.message };
+  }
+})
+ipcMain.handle('git:commit-changes', async (_, workspaceRoot: string, message: string) => {
+  const {simpleGit} = await import('simple-git')
+  try {
+    const git = simpleGit(workspaceRoot);
+    await git.add('.');
+    const commitSummary = await git.commit(message);
+    return { success: true, commitSummary };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+})
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'wave.svg'),
