@@ -62,12 +62,17 @@ interface Window {
     checkIfIndexExists: (workspaceRoot: string) => Promise<boolean>
     getIndex: (workspaceRoot: string) => Promise<{ startCommand?: string; stack?: string[]; files?: IpcFileEntry[] } | null>
     getInlineSuggestion: (payload: { filePath: string; fileContent: string; token: string; cursorPosition: { line: number; column: number }; workspaceRoot?: string; packId?: string }) => Promise<{ suggestion: string | null; error: string | null }>
-    checkGitExists: (folderPath: string) => boolean
+    checkGitExists: (folderPath: string) => Promise<{ there: boolean; reason?: string; remoteUrl?: string }>
+    checkGitStatus: (folderPath: string) => Promise<{ isClean: boolean; ahead: number; behind: number; currentBranch: string; changes: { path: string; file: string; status: string }[] }>
+    commitToGit: (folderPath: string, message: string) => Promise<void>
+    getRecentFolders: () => Promise<string[]>
+    addRecentFolder: (folderPath: string) => Promise<void>
     createWindow: () => Promise<void>
     openSettings: () => Promise<void>
     getActiveTheme: () => Promise<string>
-    getSpecificTheme: (themeId: string) => Promise<{ video?: string } | null>
+    getSpecificTheme: (themeId: string) => Promise<import('../lib/zustand').Theme | null>
     getAllThemes: () => Promise<{ id: string; name: string; description?: string; preview?: string; video?: string }[]>
     updateActiveTheme: (id: string) => Promise<void>
+    openDevTools: () => Promise<void>
   }
 }

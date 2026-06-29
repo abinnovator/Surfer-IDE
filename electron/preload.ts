@@ -67,4 +67,6 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   commitToGit: (workspaceRoot: string, message: string) => ipcRenderer.invoke('git:commit-changes', workspaceRoot, message),
   checkGitStatus: (workspaceRoot: string) => ipcRenderer.invoke('git:get-uncommitted-changes', workspaceRoot),
   checkGitExists: (workspaceRoot: string) => ipcRenderer.invoke('git:check-exists', workspaceRoot),
+  getRecentFolders: () => ipcRenderer.invoke('recent-folders:get'),
+  addRecentFolder: (folderPath: string) => ipcRenderer.invoke('recent-folders:add', folderPath),
 })

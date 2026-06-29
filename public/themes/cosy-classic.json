@@ -23,26 +23,42 @@
         "icon-hover-background": "#3D3020",
         "border": "#3D3020"
     },
-    "ai-chat": {
+    "aiChat": {
         "border": "#3D3020",
         "background": "#16110B",
-        "input-background": "#3d3020",
-        "sign-in-button-background": "#E8C088",
-        "Heading-color": "#E8C088",
-        "input-text-color": "#675D49"
+        "text-color": "#9A8A78",
+        "headingColor": "#E8C088",
+        "promptTextColor": "#675D49",
+        "userMessageBackground": "#3D3020",
+        "userMessageTextColor": "#E8C088",
+        "assistantMessageBackground": "transparent",
+        "assistantMessageTextColor": "#9A8A78",
+        "inputBackground": "#3d3020",
+        "inputTextColor": "#F6EBD7",
+        "inputPlaceholderColor": "#675D49",
+        "sendButtonBackground": "#3d3020",
+        "sendButtonTextColor": "#E8C088",
+        "signInTextColor": "#9A8A78",
+        "signInLinkColor": "#E8C088",
+        "signInInputBackground": "#3d3020",
+        "signInInputTextColor": "#F6EBD7",
+        "signInButtonBackground": "#E8C088",
+        "signInButtonTextColor": "#16110B",
+        "headerBorder": "#3D3020",
+        "inputBorder": "#3D3020"
     },
-    "title-bar": {
+    "titlebar": {
         "background": "#1E1710",
-        "title-text-color": "#E8C088",
-        "file-menu-background": "#1E1710",
-        "file-menu-border": "#3D3020",
-        "file-menu-item-hover-background": "#3D3020",
-        "file-menu-item-hover-text-color": "#E8C088",
-        "file-menu-item-text-color": "#9A8A78",
-        "right-buttons-color": "#9A8A78",
-        "right-buttons-hover-color": "#E8C088"
+        "titleTextColor": "#E8C088",
+        "fileMenuBackground": "#1E1710",
+        "fileMenuBorder": "#3D3020",
+        "fileMenuItemHoverBackground": "#3D3020",
+        "fileMenuItemHoverTextColor": "#E8C088",
+        "fileMenuItemTextColor": "#9A8A78",
+        "rightButtonsColor": "#9A8A78",
+        "rightButtonsHoverColor": "#E8C088"
     },
-    "status-bar": {
+    "statusBar": {
         "background": "#1E1710",
         "text-color": "#9A8A78",
         "border": "#3D3020"

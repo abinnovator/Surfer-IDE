@@ -1,5 +1,5 @@
 import { useStore } from '../../lib/zustand'
-import { ClockIcon, Video } from 'lucide-react'
+import { ClockIcon, Pause, Play, Video, VideoOff } from 'lucide-react'
 
 const Statusbar = () => {
     const openTabs = useStore.openTabs((state) => state.openTabs)
@@ -11,8 +11,16 @@ const Statusbar = () => {
     const cursorLine = useStore.filePosition((state) => state.cursorLine)
     const cursorCol = useStore.filePosition((state) => state.cursorCol)
     const type = activeTab?.name.split('.').pop()
+    const theme = useStore.theme((state) => state.theme)
+    const sb = theme?.colors?.statusBar
+    const videoState = useStore.video((state) => state.video)
+    console.log('Statusbar theme:', sb)
+    const videoEnabled = useStore.videoEnabled((state) => state.videoEnabled)
   return (
-    <div className="flex flex-row justify-between items-center py-2 px-2 bg-[#1E1710] border-t-2 border-t-[#3D3020] text-white">
+    <div
+      className="flex flex-row justify-between items-center py-2 px-2 border-t-2"
+      style={{ background: sb?.background || '#1E1710', borderTopColor: sb?.border || '#3D3020', color: sb?.['text-color'] || '#9A8A78' }}
+    >
         <div className="flex flex-row gap-2">
             <span className="text-[8px]">Project: {folderName? folderName: "No project Opened"}</span>
             {activeTab && (
@@ -20,7 +28,10 @@ const Statusbar = () => {
             )}
             <span className="flex flex-row text-[10px] gap-2"><ClockIcon size={12} /> {timeTracked} </span>
             <button onClick={() => useStore.video.getState().setVideo(!useStore.video.getState().video)} className="cursor-pointer">
-                <Video size={12} />
+                {videoState ? <Pause size={12} /> : <Play size={12} />}
+            </button>
+            <button className="cursor-pointer" onClick={()=> useStore.videoEnabled.getState().setVideoEnabled(!useStore.videoEnabled.getState().videoEnabled)}>
+                {!videoEnabled ? <Video size={12} /> : <VideoOff size={12} />}
             </button>
         </div>
         <div className="flex flex-row gap-3">

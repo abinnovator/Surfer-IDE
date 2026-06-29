@@ -29,7 +29,7 @@ function App() {
   const terminalCounter = useRef(1)
   const videoRef = useRef<HTMLVideoElement>(null)
   const videoPlaying = useStore.video((state) => state.video)
-  const [videoPath, setVideoPath] = useState<string>('/Chillhop_White_Oak.mp4')
+  const [videoPath, setVideoPath] = useState<string| null>(null)
   const themeObject = useStore.theme((state) => state.theme)
 
   useEffect(() => {
@@ -200,17 +200,21 @@ function App() {
     async function loadStyles() {
       const activeThemeId = await window.ipcRenderer.getActiveTheme()
       if (!activeThemeId) return
-      const theme = await window.ipcRenderer.getSpecificTheme(activeThemeId)
-      useStore.theme.getState().setTheme(theme)
+      const themeStyles = await window.ipcRenderer.getSpecificTheme(activeThemeId)
+      if (themeStyles) useStore.theme.getState().setTheme(themeStyles)
     }
     loadStyles()
   }, [])
-    
+  const theme = useStore.theme((state) => state.theme)
+  const editorStyles = theme?.colors?.editor || {}
+  console.log('Editor styles:', editorStyles)
+  const videoEnabled = useStore.videoEnabled((state) => state.videoEnabled)
 
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       {/* Video */}
+      {videoPath != null && (
       <video
         ref={videoRef}
         src={videoPath || '/Chillhop_White_Oak.mp4'}
@@ -220,7 +224,8 @@ function App() {
         onError={() => { if (videoPath !== '/Chillhop_White_Oak.mp4') setVideoPath('/Chillhop_White_Oak.mp4') }}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         style={{ opacity: 0.15, zIndex: 0 }}
-      />  
+        hidden={!videoEnabled}
+      />  )}
       {/* Content */}
     <div className="h-screen w-screen   text-white overflow-hidden flex flex-col">
 
@@ -234,20 +239,23 @@ function App() {
         <LeftSidebar />
 
         {/* Editor area */}
-        <div className={`flex-1 bg-[#0F0B08] overflow-hidden flex flex-col`}>
+        <div className="flex-1 overflow-hidden flex flex-col" style={{ backgroundColor: editorStyles.background || '#0F0B08' }}>
 
           {/* Tab bar */}
           {openTabs.length > 0 && (
-            <div className="flex flex-row overflow-x-auto shrink-0 border-b border-b-[#3D3020] bg-[#1A1208]" style={{ scrollbarWidth: 'none' }}>
+            <div className="flex flex-row overflow-x-auto shrink-0 border-b border-b-[#3D3020]" style={{ backgroundColor: editorStyles.tabsBackground || '#1A1208', scrollbarWidth: 'none' }}>
               {openTabs.map(tab => (
                 <div
                   key={tab.path}
                   onClick={() => useStore.activeTabPath.getState().setActiveTabPath(tab.path)}
-                  className={`flex items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer shrink-0 border-r border-r-[#3D3020] group transition-colors ${
-                    tab.path === activeTabPath
-                      ? `text-${themeObject?.colors?.editor?.tabsActiveTextColor || '#E8C088'} bg-[${themeObject?.colors?.editor?.tabsActiveBackground || '#0F0B08'}] border-t border-t-[${themeObject?.colors?.editor?.tabsBorder || '#E8C088'}]`
-                      : `text-${themeObject?.colors?.editor?.tabsInactiveTextColor || '#6B5D4A'} hover:text-${themeObject?.colors?.editor?.tabsHoverTextColor || '#9A8A78'} hover:bg-[${themeObject?.colors?.editor?.tabsHoverBackground || '#16110D'}]`
-                  }`}
+                  className="flex items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer shrink-0 border-r border-r-[#3D3020] group transition-colors"
+                  style={tab.path === activeTabPath ? {
+                    color: editorStyles.tabsActiveTextColor || '#E8C088',
+                    backgroundColor: editorStyles.tabsActiveBackground || '#0F0B08',
+                    borderTop: `1px solid ${editorStyles.tabsBorder || '#E8C088'}`,
+                  } : {
+                    color: editorStyles.tabsInactiveTextColor || '#6B5D4A',
+                  }}
                 >
                   <span className="truncate max-w-32">{tab.name}</span>
                   

@@ -1,0 +1,67 @@
+{
+  "id": "cosy-snowy",
+  "name": "Cosy Snowy",
+  "description": "Cosy and frost-kissed with a winter feel, snowfall video",
+  "preview": "#1a2332",
+  "video": "/Winter_landscape.mp4",
+  "colors": {
+    "editor": {
+        "background": "#0B0F17",
+        "pre-highlight": "#e2e8f0",
+        "line-numbers": "#4a5568",
+        "tabsBackground": "#111827",
+        "tabsBorder": "#223047",
+        "tabsActiveBackground": "#0B0F17",
+        "tabsActiveTextColor": "#93C5FD",
+        "tabsInactiveTextColor": "#4B5563",
+        "tabsHoverBackground": "#151D2A",
+        "tabsHoverTextColor": "#E2E8F0"
+    },
+    "left-sidebar": {
+        "icon-color": "#64748B",
+        "icon-hover-color": "#93C5FD",
+        "icon-hover-background": "#223047",
+        "border": "#223047"
+    },
+    "aiChat": {
+        "border": "#223047",
+        "background": "#0F1420",
+        "text-color": "#94A3B8",
+        "headingColor": "#93C5FD",
+        "promptTextColor": "#475569",
+        "userMessageBackground": "#223047",
+        "userMessageTextColor": "#E2E8F0",
+        "assistantMessageBackground": "transparent",
+        "assistantMessageTextColor": "#94A3B8",
+        "inputBackground": "#223047",
+        "inputTextColor": "#F8FAFC",
+        "inputPlaceholderColor": "#475569",
+        "sendButtonBackground": "#223047",
+        "sendButtonTextColor": "#93C5FD",
+        "signInTextColor": "#94A3B8",
+        "signInLinkColor": "#93C5FD",
+        "signInInputBackground": "#223047",
+        "signInInputTextColor": "#F8FAFC",
+        "signInButtonBackground": "#93C5FD",
+        "signInButtonTextColor": "#0B0F17",
+        "headerBorder": "#223047",
+        "inputBorder": "#223047"
+    },
+    "titlebar": {
+        "background": "#141B29",
+        "titleTextColor": "#93C5FD",
+        "fileMenuBackground": "#141B29",
+        "fileMenuBorder": "#223047",
+        "fileMenuItemHoverBackground": "#223047",
+        "fileMenuItemHoverTextColor": "#93C5FD",
+        "fileMenuItemTextColor": "#64748B",
+        "rightButtonsColor": "#64748B",
+        "rightButtonsHoverColor": "#93C5FD"
+    },
+    "statusBar": {
+        "background": "#141B29",
+        "text-color": "#64748B",
+        "border": "#223047"
+    }
+  }
+}

@@ -31,6 +31,21 @@ let settingsWin: BrowserWindow | null = null
 const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash'
 let ptyProcess: any = null
 const tokenPath = path.join(app.getPath('userData'), 'token.enc')
+const recentFoldersPath = path.join(app.getPath('userData'), 'recent-folders.json')
+
+function getRecentFolders(): string[] {
+  if (!fs.existsSync(recentFoldersPath)) return []
+  try { return JSON.parse(fs.readFileSync(recentFoldersPath, 'utf-8')) } catch { return [] }
+}
+
+function addRecentFolder(folderPath: string): void {
+  const recent = getRecentFolders().filter(p => p !== folderPath)
+  recent.unshift(folderPath)
+  fs.writeFileSync(recentFoldersPath, JSON.stringify(recent.slice(0, 10), null, 2))
+}
+
+ipcMain.handle('recent-folders:get', () => getRecentFolders())
+ipcMain.handle('recent-folders:add', (_, folderPath: string) => addRecentFolder(folderPath))
 // In dev stuff
 ipcMain.handle('ai:get-inline-suggestion', async (_, payload: {
   filePath: string

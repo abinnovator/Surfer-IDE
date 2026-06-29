@@ -212,9 +212,11 @@ export default function Editor({ content: initialContent, fileName, filePath, on
     overflowWrap: 'normal',
     wordBreak: 'normal',
   }
+  const theme = useStore.theme((state) => state.theme)
+  const editorstyles= theme?.colors?.editor
 
   return (
-    <div className="h-full flex overflow-hidden bg-[#0F0B08]">
+    <div className="h-full flex overflow-hidden" style={{ backgroundColor: editorstyles?.background || '#0F0B08' }}>
 
       {/* line numbers */}
       <div
@@ -228,8 +230,8 @@ export default function Editor({ content: initialContent, fileName, filePath, on
           paddingBottom: '16px',
           width: '48px',
           textAlign: 'right',
-          color: '#7a6a58',
-          backgroundColor: '#0F0B08',
+          color: editorstyles?.lineNumbers || '#7a6a58',
+          backgroundColor: editorstyles?.background || '#0F0B08',
           borderRight: '1px solid #1e1710',
           overflowY: 'hidden',
         }}

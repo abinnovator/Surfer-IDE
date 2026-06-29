@@ -1,12 +1,21 @@
 {
   "id": "modern",
   "name": "Modern",
+  "description": "Sleek and minimalistic like VS Code",
+  "preview": "#1e1e1e",
   "video": null,
   "colors": {
     "editor": {
       "background": "#1e1e1e",
       "pre-highlight": "#d4d4d4",
-      "line-numbers": "#5a5a5a"
+      "line-numbers": "#5a5a5a",
+      "tabsBackground": "#252526",
+      "tabsBorder": "#3d3d3d",
+      "tabsActiveBackground": "#1e1e1e",
+      "tabsActiveTextColor": "#ffffff",
+      "tabsInactiveTextColor": "#8b8b8b",
+      "tabsHoverBackground": "#2a2d2e",
+      "tabsHoverTextColor": "#cccccc"
     },
     "left-sidebar": {
       "icon-color": "#858585",
@@ -14,26 +23,42 @@
       "icon-hover-background": "#2a2d2e",
       "border": "#3d3d3d"
     },
-    "ai-chat": {
+    "aiChat": {
       "border": "#3d3d3d",
       "background": "#252526",
-      "input-background": "#3c3c3c",
-      "sign-in-button-background": "#007acc",
-      "Heading-color": "#ffffff",
-      "input-text-color": "#9d9d9d"
+      "text-color": "#cccccc",
+      "headingColor": "#ffffff",
+      "promptTextColor": "#8b8b8b",
+      "userMessageBackground": "#094771",
+      "userMessageTextColor": "#ffffff",
+      "assistantMessageBackground": "transparent",
+      "assistantMessageTextColor": "#cccccc",
+      "inputBackground": "#3c3c3c",
+      "inputTextColor": "#f3f3f3",
+      "inputPlaceholderColor": "#8b8b8b",
+      "sendButtonBackground": "#3c3c3c",
+      "sendButtonTextColor": "#ffffff",
+      "signInTextColor": "#cccccc",
+      "signInLinkColor": "#4fc3f7",
+      "signInInputBackground": "#3c3c3c",
+      "signInInputTextColor": "#f3f3f3",
+      "signInButtonBackground": "#007acc",
+      "signInButtonTextColor": "#ffffff",
+      "headerBorder": "#3d3d3d",
+      "inputBorder": "#3d3d3d"
     },
-    "title-bar": {
+    "titlebar": {
       "background": "#323233",
       "title-text-color": "#ffffff",
-      "file-menu-background": "#252526",
-      "file-menu-border": "#3d3d3d",
-      "file-menu-item-hover-background": "#094771",
-      "file-menu-item-hover-text-color": "#ffffff",
-      "file-menu-item-text-color": "#cccccc",
-      "right-buttons-color": "#858585",
-      "right-buttons-hover-color": "#ffffff"
+      "fileMenuBackground": "#252526",
+      "fileMenuBorder": "#3d3d3d",
+      "fileMenuItemHoverBackground": "#094771",
+      "fileMenuItemHoverTextColor": "#ffffff",
+      "fileMenuItemTextColor": "#cccccc",
+      "rightButtonsColor": "#858585",
+      "rightButtonsHoverColor": "#ffffff"
     },
-    "status-bar": {
+    "statusBar": {
       "background": "#007acc",
       "text-color": "#ffffff",
       "border": "#007acc"
