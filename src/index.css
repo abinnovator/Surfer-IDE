@@ -1,13 +1,13 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --font-sans: "Geist Mono", monospace;
-  --font-mono: "Geist Mono", monospace;
+  --font-sans: 'Geist Mono', monospace;
+  --font-mono: 'Geist Mono', monospace;
 }
 
 @layer base {
   body {
-    font-family: "Geist Mono", monospace;
+    font-family: 'Geist Mono', monospace;
   }
 }
 
@@ -23,7 +23,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3D3020;
+  background: #3d3020;
   border-radius: 3px;
 }
 
@@ -40,4 +40,3 @@
 .xterm-screen {
   width: 100% !important;
 }
-

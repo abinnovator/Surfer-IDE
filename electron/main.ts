@@ -177,6 +177,93 @@ ipcMain.handle('terminal:run', async (_, cwd: string, command: string) => {
   ptyProcess.write(`${command}\r`)
 })
 
+// Hackatime Stuff
+ipcMain.handle('store-hackatime-token', (_, token: string) => {
+  const encrypted = safeStorage.encryptString(token)
+  fs.writeFileSync(path.join(app.getPath('userData'), 'hackatime-token.enc'), encrypted)
+})
+ipcMain.handle('get-hackatime-token', () => {
+  return getHacktimeToken()
+})
+// Aliases matching preload naming convention
+ipcMain.handle('hackatime:store-token', (_, token: string) => {
+  const encrypted = safeStorage.encryptString(token)
+  fs.writeFileSync(path.join(app.getPath('userData'), 'hackatime-token.enc'), encrypted)
+})
+ipcMain.handle('hackatime:get-token', () => {
+  return getHacktimeToken()
+})
+async function getHacktimeToken(): Promise<string | null> {
+  const tokenFilePath = path.join(app.getPath('userData'), 'hackatime-token.enc')
+  if (!fs.existsSync(tokenFilePath)) return null
+  const encrypted = fs.readFileSync(tokenFilePath)
+  return safeStorage.decryptString(Buffer.from(encrypted))
+}
+async function sendHackatimeHeartbeat(payload: {
+  entity: string
+  language: string
+  project: string
+  isWrite: boolean
+}) {
+  const apiKey = await getHacktimeToken()
+  if (!apiKey) return
+
+  try {
+    const url = `https://hackatime.hackclub.com/api/hackatime/v1/users/current/heartbeats?api_key=${encodeURIComponent(apiKey)}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entity: payload.entity,
+        type: 'file',
+        language: payload.language,
+        project: payload.project,
+        time: Date.now() / 1000,
+        is_write: payload.isWrite,
+        editor: 'Surfer',
+        plugin: 'surfer-ide/0.1.0',
+      })
+    })
+    if (!res.ok) {
+      const body = await res.text()
+      console.error('hackatime heartbeat error:', res.status, body)
+    }
+  } catch (err) {
+    console.error('hackatime heartbeat failed:', err)
+  }
+}
+async function getTodaysStats(): Promise<Record<string, unknown> | null> {
+  const apiKey = await getHacktimeToken()
+  if (!apiKey) return null
+
+  try {
+    const url = `https://hackatime.hackclub.com/api/hackatime/v1/users/current/statusbar/today?api_key=${encodeURIComponent(apiKey)}`
+    const res = await fetch(url)
+    if (!res.ok) {
+      const body = await res.text()
+      console.error('hackatime stats error:', res.status, body)
+      return null
+    }
+    const data = await res.json()
+    console.log('hackatime stats data:', JSON.stringify(data))
+    return data
+  } catch (err) {
+    console.error('hackatime stats failed:', err)
+    return null
+  }
+}
+ipcMain.handle('hackatime:get-todays-stats', async () => {
+  return getTodaysStats()
+})
+
+ipcMain.handle('hackatime:heartbeat', async (_, payload: {
+  entity: string
+  language: string
+  project: string
+  isWrite: boolean
+}) => {
+  await sendHackatimeHeartbeat(payload)
+})
 // AI stuff
 ipcMain.handle('store-token', (_, token: string) => {
   const encrypted = safeStorage.encryptString(token)
@@ -673,7 +760,7 @@ ipcMain.handle('git:get-uncommitted-changes', async (_, workspaceRoot: string) =
       changes // Array of { file, status }
     };
   } catch (error) {
-    return { error: error.message };
+    return { error: (error as Error).message };
   }
 })
 ipcMain.handle('git:commit-changes', async (_, workspaceRoot: string, message: string) => {
@@ -685,7 +772,7 @@ ipcMain.handle('git:commit-changes', async (_, workspaceRoot: string, message: s
     const gitPush = await git.push();
     return { success: true, commitSummary, gitPush };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 })
 function createWindow() {

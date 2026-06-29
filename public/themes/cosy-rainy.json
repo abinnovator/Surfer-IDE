@@ -3,7 +3,7 @@
   "name": "Rainy Day",
   "description": "Dark and moody with rain ambiance",
   "preview": "#0a0e14",
-  "video": "/Rainy_Day.mp4",
+  "video": "./Rainy_Day.mp4",
   "colors": {
     "editor": {
       "background": "#0a0e14",

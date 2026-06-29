@@ -2,6 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.surfer.ide",
   "asar": true,
+  "asarUnpack": ["**/*.mp4"],
+  "forceCodeSigning": false,
   "productName": "Surfer",
   "directories": {
     "output": "release/${version}"
@@ -17,12 +19,12 @@
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
   },
   "win": {
-    "icon": "public/wave.svg",
-    "sign": false,
-    "signingHashAlgorithms": null,
+    "extraResources": [
+      { "from": ".env", "to": ".env" }
+    ],
     "target": [
       {
-        "target": "nsis",
+        "target": "portable",
         "arch": [
           "x64"
         ]

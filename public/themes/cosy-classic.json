@@ -3,7 +3,7 @@
   "name": "Cosy Classic",
   "description": "Cosy and warm with a classic feel, fireplace video",
   "preview": "#1e1e1e",
-  "video": "/Chillhop_White_oak.mp4",
+  "video": "./Chillhop_White_Oak.mp4",
   "colors": {
     "editor": {
         "background": "#0F0B08",

@@ -3,7 +3,7 @@
   "name": "Cosy Snowy",
   "description": "Cosy and frost-kissed with a winter feel, snowfall video",
   "preview": "#1a2332",
-  "video": "/Winter_landscape.mp4",
+  "video": "./Winter_landscape.mp4",
   "colors": {
     "editor": {
         "background": "#0B0F17",

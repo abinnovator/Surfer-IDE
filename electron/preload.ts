@@ -69,4 +69,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   checkGitExists: (workspaceRoot: string) => ipcRenderer.invoke('git:check-exists', workspaceRoot),
   getRecentFolders: () => ipcRenderer.invoke('recent-folders:get'),
   addRecentFolder: (folderPath: string) => ipcRenderer.invoke('recent-folders:add', folderPath),
+  hackatimeHeartbeat: (payload: { entity: string, language: string, project: string, isWrite: boolean }) =>
+  ipcRenderer.invoke('hackatime:heartbeat', payload),
+  hackatimeStoreToken: (token: string) => ipcRenderer.invoke('hackatime:store-token', token),
+  hackatimeGetToken: () => ipcRenderer.invoke('hackatime:get-token'),
+  hackatimeGetTodaysStats: () => ipcRenderer.invoke('hackatime:get-todays-stats'),
 })

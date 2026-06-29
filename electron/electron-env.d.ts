@@ -74,5 +74,9 @@ interface Window {
     getAllThemes: () => Promise<{ id: string; name: string; description?: string; preview?: string; video?: string }[]>
     updateActiveTheme: (id: string) => Promise<void>
     openDevTools: () => Promise<void>
+    hackatimeHeartbeat: (payload: { entity: string; language: string; project: string; isWrite: boolean }) => Promise<void>
+    hackatimeStoreToken: (token: string) => Promise<void>
+    hackatimeGetToken: () => Promise<string | null>
+    hackatimeGetTodaysStats: () => Promise<{ data?: { grand_total?: { text?: string; hours?: number; minutes?: number; total_seconds?: number } } } | null>
   }
 }
