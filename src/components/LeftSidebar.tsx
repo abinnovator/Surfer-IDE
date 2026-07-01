@@ -1,5 +1,5 @@
-import { Files, Search, GitGraph, List, Package, ChevronDown, ChevronRight, Folder, FolderOpen, File, Send } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { Files, Search, GitGraph, List, Package, ChevronDown, ChevronRight, Folder, FolderOpen, File, Send, Music } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import TaskList from '../TaskList'
 import LangPackCard from './LangPackCard'
 import { useStore, FileEntry } from '../../lib/zustand'
@@ -9,6 +9,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "./ui/context-menu"
+import { cn } from '../../lib/utils'
+import SpotifyPlayer from './MusicPlayer'
 
 interface SidebarColors {
   iconColor: string
@@ -171,6 +173,12 @@ const LeftSidebar = () => {
   const [gitExists, setGitExists] = useState(false)
   const [gitChanges, setGitChanges] = useState({ isClean: true, ahead: 0, behind: 0, currentBranch: '', changes: [] as { path: string; file: string; status: string }[] })
   const [commitMessage, setCommitMessage]  = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [results, setResults]= useState([] as { filePath: string; line: number; content: string }[])
+  const spotifyPanelOpen = useStore.spotifyPanel((state) => state.spotifyPanelOpen)
+  const setSpotifyPanelOpen = useStore.spotifyPanel((state) => state.setSpotifyPanelOpen)
+  console.log(spotifyPanelOpen)
 
   const ls = theme?.colors?.['left-sidebar']
   const ed = theme?.colors?.editor
@@ -207,23 +215,26 @@ const LeftSidebar = () => {
     useStore.activeTabPath.getState().setActiveTabPath(entry.path)
   }
 
-  const togglePanel = useCallback(({ panel }: { panel: 'file-explorer' | 'search' | 'git' | 'task-list' | 'langPackPanel' }) => {
+  const togglePanel = useCallback(({ panel }: { panel: 'file-explorer' | 'search' | 'git' | 'task-list' | 'langPackPanel'| 'spotify' }) => {
     const fe = useStore.fileExplorerOpen.getState()
     const sm = useStore.searchMenuOpen.getState()
     const gm = useStore.gitMenuOpen.getState()
     const tl = useStore.taskListOpen.getState()
     const lp = useStore.langPackOpen.getState()
+    const sp = useStore.spotifyPanel.getState()
 
     if (panel === 'file-explorer') {
-      fe.setFileExplorerOpen(!fe.fileExplorerOpen); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false)
+      fe.setFileExplorerOpen(!fe.fileExplorerOpen); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
     } else if (panel === 'search') {
-      sm.setSearchMenuOpen(!sm.searchMenuOpen); fe.setFileExplorerOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false)
+      sm.setSearchMenuOpen(!sm.searchMenuOpen); fe.setFileExplorerOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
     } else if (panel === 'git') {
-      gm.setGitMenuOpen(!gm.gitMenuOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false)
+      gm.setGitMenuOpen(!gm.gitMenuOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
     } else if (panel === 'task-list') {
-      tl.setTaskListOpen(!tl.taskListOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); lp.setLangPackOpen(false)
+      tl.setTaskListOpen(!tl.taskListOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
     } else if (panel === 'langPackPanel') {
-      lp.setLangPackOpen(!lp.langPackOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false)
+      lp.setLangPackOpen(!lp.langPackOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); sp.setSpotifyPanelOpen(false);
+    }else if (panel === 'spotify') {
+      sp.setSpotifyPanelOpen(!sp.spotifyPanelOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false);
     }
   }, [])
 
@@ -239,13 +250,39 @@ const LeftSidebar = () => {
   const inputStyle = { background: sc.iconHoverBg, color: sc.iconActiveColor }
 
   const panelClass = "flex flex-col w-52 border-r-2 flex-shrink-0"
+  useEffect (()=> {
+    async function getFiles () {
+      const files = await (window as any).ipcRenderer.buildSearchIndex(folderPath || '');
+      console.log(files);
+      return files;
+    }
+    if (folderPath) {
+      console.log('folderPath', folderPath);
+      getFiles()
+    }
+  })
+  const handleQueryChange = (value: string) => {
+    setSearchQuery(value)
+    
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    
+    if (!value.trim()) {
+      setResults([])
+      return
+    }
 
+    debounceTimer.current = setTimeout(async () => {
+      const res = await window.ipcRenderer.invoke('search:query', folderPath, value)
+      setResults(Array.isArray(res) ? res : res ? [res] : [])
+      console.log('Search results:', res)
+    }, 400)
+  }  
+  const spotifyClass = cn('flex flex-col w-52 border-r-2 flex-shrink-0')
   return (
     <div
       className="flex flex-row shrink-0 overflow-hidden"
       style={{ '--ls-icon': sc.iconColor, '--ls-active': sc.iconActiveColor, '--ls-hover-bg': sc.iconHoverBg } as React.CSSProperties}
     >
-      {/* Icon strip */}
       <div
         className="flex flex-col px-2 py-4 gap-6 w-12 flex-shrink-0 border-r-2"
         style={{ background: stripBg, borderColor: sc.border }}
@@ -256,6 +293,7 @@ const LeftSidebar = () => {
           { panel: 'git'           as const, Icon: GitGraph, open: gitMenuOpen      },
           { panel: 'task-list'     as const, Icon: List,     open: taskListOpen     },
           { panel: 'langPackPanel' as const, Icon: Package,  open: langPackOpen     },
+          { panel: 'spotify'       as const, Icon: Music,    open: setSpotifyPanelOpen },
         ]).map(({ panel, Icon, open }) => (
           <button key={panel} onClick={() => togglePanel({ panel })}>
             <Icon
@@ -324,8 +362,29 @@ const LeftSidebar = () => {
           <h1 className="text-[11px] uppercase tracking-widest" style={panelHeaderStyle}>Search</h1>
         </div>
         <div className="flex flex-col items-center pt-4 gap-3">
-          <input type="text" placeholder="Search..."  className="max-w-9/10 w-full py-1.5 text-[8px] px-2 rounded-sm focus:outline-none placeholder:opacity-40" style={inputStyle} />
+          <input type="text" placeholder="Search..."  className="max-w-9/10 w-full py-1.5 text-[8px] px-2 rounded-sm focus:outline-none placeholder:opacity-40" style={inputStyle} value={searchQuery} onChange={(e) => handleQueryChange(e.target.value) } />
           <input type="text" placeholder="Replace..." className="max-w-9/10 w-full py-1.5 text-[8px] px-2 rounded-sm focus:outline-none placeholder:opacity-40" style={inputStyle} />
+        </div>
+        <div className="flex flex-col">
+          {searchQuery.trim().length > 0 && results.length > 0 && (
+            <div className="flex flex-col gap-2 px-2 py-2 max-h-9/12 overflow-y-scroll">
+              {results.map((result) => {
+                console.log('Rendering result:', result)
+                return (
+                  <div key={result.filePath ?? result.line} className="flex flex-col gap-1 px-2 py-1 rounded cursor-pointer" style={{ background: sc.iconHoverBg }} onClick={() => handleOpenFile({name: result.filePath?.split(/[\\/]/).pop(), path: result.filePath, isDirectory: false})}>
+                    <span className="text-[10px] truncate" style={{ color: sc.iconColor }}>{result.filePath?.split(/[\\/]/).pop()}</span>
+                    <span className="text-[10px] truncate" style={{ color: sc.iconColor }}>{result.filePath}</span>
+                    <span className="text-[10px]" style={{ color: sc.iconColor }}>{result.content}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <div className={cn('flex justify-center items-center w-full h-full', searchQuery.trim().length > 0 ? 'hidden' : 'block')}>
+            <p className="text-[8px] text-muted-foreground text-centers">
+              Nothing being searched for.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -404,6 +463,12 @@ const LeftSidebar = () => {
               ))}
             </div>
           )}
+        </div>
+      </div>
+      {/* Music panel */}
+      <div className={spotifyClass} style={{ background: sc.panelBg, borderColor: sc.border }} hidden={!spotifyPanelOpen}>
+        <div className="flex flex-col w-full h-full">
+          <SpotifyPlayer />
         </div>
       </div>
     </div>

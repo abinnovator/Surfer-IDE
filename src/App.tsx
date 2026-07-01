@@ -11,6 +11,7 @@ import { useStore, TerminalTab } from '../lib/zustand';
 import ActionsMenu from './components/QuickFileMenu';
 import Statusbar from './components/Statusbar';
 import { useHackatime } from './hooks/use-hackatime';
+import QuickActionMenu from './components/QuickActionMenu';
 
 function App() {
   const openTabs = useStore.openTabs((state) => state.openTabs);
@@ -37,6 +38,7 @@ function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoPlaying = useStore.video((state) => state.video);
   const [videoPath, setVideoPath] = useState<string | null>(null);
+
 
   useEffect(() => {
     const v = videoRef.current;
@@ -276,6 +278,7 @@ function App() {
     activeTab?.name ?? null,
     folderPath ?? null,
   );
+  
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
@@ -303,6 +306,7 @@ function App() {
         <Titlebar />
         <div className="absolute top-40 left-1/2  z-50">
           <ActionsMenu />
+          <QuickActionMenu />
         </div>
 
         <div className="flex flex-row flex-1 overflow-hidden">
@@ -531,7 +535,6 @@ function App() {
           />
         )}
       </div>
-      {/* bg with no vid is supposed to be:- bg-[#0F0B08] */}
     </div>
   );
 }

@@ -15,7 +15,7 @@ export default defineConfig({
           build: {
             reportCompressedSize: false,
             rollupOptions: {
-              external: ['node-pty', 'pg', 'pg-native', 'prettier']
+              external: ['node-pty', 'pg', 'pg-native', 'prettier', 'formidable']
             }
           }
         }

@@ -151,6 +151,14 @@ const videoEnabled = create<{ videoEnabled: boolean; setVideoEnabled: (enabled: 
     videoEnabled: true,
     setVideoEnabled: (enabled) => set({ videoEnabled: enabled })
 }))
+const quickEasyActionMenu = create<{ quickEasyActionMenuOpen: boolean; setQuickEasyActionMenuOpen: (open: boolean) => void }>((set) => ({
+    quickEasyActionMenuOpen: false,
+    setQuickEasyActionMenuOpen: (open) => set({ quickEasyActionMenuOpen: open })
+}))
+const spotifyPanel = create<{ spotifyPanelOpen: boolean; setSpotifyPanelOpen: (open: boolean) => void }>((set) => ({
+    spotifyPanelOpen: false,
+    setSpotifyPanelOpen: (open) => set({ spotifyPanelOpen: open })
+}))
 export const useStore =  {
     fileMenuOpen,
     fileExplorerOpen,
@@ -181,5 +189,7 @@ export const useStore =  {
     unsavedFiles,
     video,
     videoEnabled,
-    theme
+    theme,
+    quickEasyActionMenu,
+    spotifyPanel
 }

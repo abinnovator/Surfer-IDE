@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { LogOut, Send } from 'lucide-react'
 import { useStore } from '../../lib/zustand'
 
@@ -121,7 +121,8 @@ const SidebarComponent = ({workspaceRoot}: {workspaceRoot: string | null}) => {
     headerBorderColor: aiChatThemes.headerBorder || aiChatThemes.border || '#3D3020',
     inputBorderColor: aiChatThemes.inputBorder || aiChatThemes.border || '#3D3020',
   }
-
+  
+  
   if (!userToken) {
     return (
       <div className="flex flex-col justify-between w-64 border-l-2 border-l-[#3D3020] flex-shrink-0" style={{ background: aiChatColors.background, color: aiChatColors.textColor, borderLeftColor: aiChatColors.border }}>

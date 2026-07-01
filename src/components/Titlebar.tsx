@@ -17,14 +17,14 @@ const Titlebar = () => {
   const theme = useStore.theme((state) => state.theme)
   const tb = theme?.colors?.titlebar
 
-  const titleColor       = tb?.titleTextColor || tb?.['title-text-color'] || '#C8B898'
-  const btnColor         = tb?.rightButtonsColor || '#9A8A78'
-  const btnHoverColor    = tb?.rightButtonsHoverColor || '#E8C088'
-  const menuBg           = tb?.fileMenuBackground || '#1E1710'
-  const menuBorder       = tb?.fileMenuBorder || '#3D3020'
-  const menuItemText     = tb?.fileMenuItemTextColor || '#9A8A78'
-  const menuHoverBg      = tb?.fileMenuItemHoverBackground || '#3D3020'
-  const menuHoverText    = tb?.fileMenuItemHoverTextColor || '#E8C088'
+  const titleColor= tb?.titleTextColor || tb?.['title-text-color'] || '#C8B898'
+  const btnColor  = tb?.rightButtonsColor || '#9A8A78'
+  const btnHoverColor = tb?.rightButtonsHoverColor || '#E8C088'
+  const menuBg = tb?.fileMenuBackground || '#1E1710'
+  const menuBorder   = tb?.fileMenuBorder || '#3D3020'
+  const menuItemText = tb?.fileMenuItemTextColor || '#9A8A78'
+  const menuHoverBg = tb?.fileMenuItemHoverBackground || '#3D3020'
+  const menuHoverText = tb?.fileMenuItemHoverTextColor || '#E8C088'
 
   const indexProject = async () => {
     if (!folderPath) return
@@ -136,7 +136,6 @@ const Titlebar = () => {
     await window.ipcRenderer.createWindow()
   }
 
-  // CSS variables let Tailwind hover:text-[var(--x)] classes work with dynamic theme colors
   const cssVars = {
     '--tb-btn':        btnColor,
     '--tb-btn-hover':  btnHoverColor,
@@ -145,7 +144,8 @@ const Titlebar = () => {
 
   const btnClass      = "text-[var(--tb-btn)] hover:text-[var(--tb-btn-hover)] transition-colors cursor-pointer"
   const menuItemClass = "w-full text-left px-3 py-1.5 text-[11px] transition-colors cursor-pointer"
-
+  const activeTab = useStore.activeTabPath((state) => state.activeTabPath)
+  console.log("Active tab path:", activeTab)
   return (
     <div
       className="flex flex-row items-center border-b-2 h-10 px-4 gap-4 flex-shrink-0 relative z-50 justify-between"
@@ -260,6 +260,12 @@ const Titlebar = () => {
           View
         </button>
       </div>
+          {/* Center */}
+          {activeTab && (
+            <div className="flex flex-row justify-center items-center py-1 px-2">
+              <p className="text-[11px] truncate" style={{ color: titleColor }}>{activeTab}</p>
+            </div>
+          )}
 
       {/* Right side */}
       <div className="flex flex-row gap-2 items-center">

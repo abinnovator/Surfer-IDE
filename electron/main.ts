@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, safeStorage, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, safeStorage, Menu, shell } from 'electron'
 import { fileURLToPath } from 'node:url'
 import fs from 'fs'
 import path from 'path'
@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 import os from 'os'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
+import SpotifyWebApi from 'spotify-web-api-node'
 
 const execAsync = promisify(exec)
 
@@ -28,7 +29,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 
 let win: BrowserWindow | null
 let settingsWin: BrowserWindow | null = null
-const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash'
+const shellExecutable = os.platform() === 'win32' ? 'powershell.exe' : 'bash'
 let ptyProcess: any = null
 const tokenPath = path.join(app.getPath('userData'), 'token.enc')
 const recentFoldersPath = path.join(app.getPath('userData'), 'recent-folders.json')
@@ -139,7 +140,7 @@ ipcMain.handle('terminal:create', async (_, workspaceRoot: string) => {
     ptyProcess.kill()
     ptyProcess = null
   }
-  ptyProcess = pty.default.spawn(shell, [], {
+  ptyProcess = pty.default.spawn(shellExecutable, [], {
     name: 'xterm-color',
     cols: 80,
     rows: 24,
@@ -162,7 +163,7 @@ ipcMain.handle('terminal:resize', (_, cols: number, rows: number) => {
 ipcMain.handle('terminal:run', async (_, cwd: string, command: string) => {
   if (!ptyProcess) {
     const pty = await import('node-pty')
-    ptyProcess = pty.default.spawn(shell, [], {
+    ptyProcess = pty.default.spawn(shellExecutable, [], {
       name: 'xterm-color',
       cols: 80,
       rows: 24,
@@ -373,6 +374,35 @@ ${projectContext ? `\nProject context:\n${projectContext}` : '\nNo project index
   }
 })
 
+ipcMain.handle('ai:get-percentage-used', async (_, token: string) => {
+  const { Pool } = await import('pg')
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL_UNPOOLED,
+    ssl: { rejectUnauthorized: false }
+  })
+  try{
+    const { rows } = await pool.query(
+      'SELECT * FROM users WHERE api_token = $1',
+      [token]
+    )
+    const user = rows[0]
+
+    if (!user) {
+
+      return
+    }
+
+    const PLAN_LIMITS: Record<string, number> = {
+      free: 1_000_000,
+      pro: 5_000_000,
+      max: 20_000_000,
+    }
+    const percentageUsed = Math.min((user.token_spend / (PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.free)) * 100, 100)
+    return percentageUsed
+  }catch(err){
+    console.error('ai:get-percentage-used error:', err)
+  }
+})
 
 ipcMain.handle('agent:run', async (event, payload: { task: string, workspaceRoot: string }) => {
   const { createOrchestratorAgent } = await import('../src/agents/OrchestratorAgent')
@@ -775,6 +805,140 @@ ipcMain.handle('git:commit-changes', async (_, workspaceRoot: string, message: s
     return { success: false, error: (error as Error).message };
   }
 })
+interface searchIndex {
+  path: string,
+  lines: string[]
+}
+let searchIndexData: searchIndex[] = []
+function buildSearchIndex(workspaceRoot: string): { success: boolean, indexedFiles: number } {
+  const ignored = ['node_modules', '.git', 'dist', '.next', '.surfer', 'dist-electron', '.release','.godot','.next','.vite','.vscode','.idea','__pycache__','venv','.venv','.mypy_cache','.pytest_cache']
+  const index: searchIndex[] = []
+  const indexed = (dir: string) => {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (ignored.includes(entry.name)) continue  // fixed
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          indexed(fullPath)
+        } else {
+          try {
+            const content = fs.readFileSync(fullPath, 'utf-8')
+            index.push({ path: fullPath, lines: content.split('\n') })
+          } catch (error) {
+            console.error(`Error reading file ${fullPath}:`, error)
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error reading directory ${dir}:`, error)
+    }
+  }
+  indexed(workspaceRoot)
+  searchIndexData = index
+  return { success: true, indexedFiles: index.length }
+}
+ipcMain.handle('search:build-index', async (_, workspaceRoot: string) => {
+  const result = await  buildSearchIndex(workspaceRoot)
+  return result
+})
+ipcMain.handle("search:query", async (_, workspaceRoot: string, query: string) => {
+  if (!searchIndexData.length) {
+    await buildSearchIndex(workspaceRoot)
+  }
+  
+  const results: { filePath: string, line: number, content: string }[] = []
+  
+  for (const file of searchIndexData) {
+    file.lines.forEach((line, i) => {
+      if (line.toLowerCase().includes(query.toLowerCase())) {
+        results.push({ filePath: file.path, line: i + 1, content: line.trim() })
+      }
+    })
+  }
+  
+  return results.slice(0, 200)
+})
+ipcMain.handle('shell:open-external', async (_, url: string) => {
+  await shell.openExternal(url)
+})
+
+ipcMain.handle('shell:open-folder', async (_, folderPath: string) => {
+  await shell.openPath(folderPath)
+})
+
+
+// Spotify auth stuff
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('surfer', process.execPath, [path.resolve(process.argv[1])])
+  }
+} else {
+  app.setAsDefaultProtocolClient('surfer')
+}
+
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  const callbackUrl = new URL(url)
+  const code = callbackUrl.searchParams.get('code')
+  if (code) {
+    win?.webContents.send('spotify:callback', code)
+  }
+})
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (_, commandLine) => {
+    const url = commandLine.find(arg => arg.startsWith('surfer://'))
+    if (url) {
+      const callbackUrl = new URL(url)
+      const code = callbackUrl.searchParams.get('code')
+      if (code) win?.webContents.send('spotify:callback', code)
+    }
+    win?.focus()
+  })
+}
+
+const spotifyApi = new SpotifyWebApi({
+  clientId: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  redirectUri: 'surfer://spotify-callback'
+})
+ipcMain.handle('spotify:is-connected', () => {
+  return !!spotifyApi.getAccessToken()
+})
+ipcMain.handle('spotify:get-auth-url', () => {
+  return spotifyApi.createAuthorizeURL([
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+  ], 'surfer-state')
+})
+
+// exchange code for tokens
+ipcMain.handle('spotify:exchange-code', async (_, code: string) => {
+  const data = await spotifyApi.authorizationCodeGrant(code)
+  spotifyApi.setAccessToken(data.body.access_token)
+  spotifyApi.setRefreshToken(data.body.refresh_token)
+  return { success: true }
+})
+
+ipcMain.handle('spotify:get-playback', async () => {
+  try {
+    const data = await spotifyApi.getMyCurrentPlaybackState()
+    return data.body
+  } catch (err) {
+    const { statusCode, body } = err as { statusCode?: number; body?: unknown }
+    console.error('spotify:get-playback failed', statusCode, body)
+    return { error: statusCode ?? 0 }
+  }
+})
+
+ipcMain.handle('spotify:play', async () => spotifyApi.play())
+ipcMain.handle('spotify:pause', async () => spotifyApi.pause())
+ipcMain.handle('spotify:next', async () => spotifyApi.skipToNext())
+ipcMain.handle('spotify:previous', async () => spotifyApi.skipToPrevious())
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'wave.svg'),
