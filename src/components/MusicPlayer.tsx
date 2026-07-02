@@ -78,7 +78,7 @@ const SpotifyPlayer = () => {
       <div className="flex flex-col items-center justify-center gap-2 p-4 h-full">
         <Music size={24} className="text-[#3D3020]" />
         <p className="text-[#6a5a48] text-[11px] text-center">
-          Spotify denied access to this account. If this app is in Development Mode, add this account under Users and Access in the Spotify Developer Dashboard.
+          Spotify denied access. The Spotify Web API requires a Premium subscription — free accounts can't be used here.
         </p>
       </div>
     )

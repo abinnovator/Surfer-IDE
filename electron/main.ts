@@ -921,6 +921,13 @@ ipcMain.handle('spotify:exchange-code', async (_, code: string) => {
   const data = await spotifyApi.authorizationCodeGrant(code)
   spotifyApi.setAccessToken(data.body.access_token)
   spotifyApi.setRefreshToken(data.body.refresh_token)
+  try {
+    const me = await spotifyApi.getMe()
+    console.log('spotify authorized as', me.body.id, me.body.email, 'product:', me.body.product)
+  } catch (err) {
+    const { statusCode, body } = err as { statusCode?: number; body?: unknown }
+    console.error('spotify:get-me failed', statusCode, body)
+  }
   return { success: true }
 })
 

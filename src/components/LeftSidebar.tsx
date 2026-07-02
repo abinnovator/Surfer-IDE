@@ -1,4 +1,4 @@
-import { Files, Search, GitGraph, List, Package, ChevronDown, ChevronRight, Folder, FolderOpen, File, Send, Music } from 'lucide-react'
+import { Files, Search, GitGraph, List, Package, ChevronDown, ChevronRight, Folder, FolderOpen, File, Send } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import TaskList from '../TaskList'
 import LangPackCard from './LangPackCard'
@@ -10,7 +10,6 @@ import {
   ContextMenuTrigger,
 } from "./ui/context-menu"
 import { cn } from '../../lib/utils'
-import SpotifyPlayer from './MusicPlayer'
 
 interface SidebarColors {
   iconColor: string
@@ -176,10 +175,6 @@ const LeftSidebar = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [results, setResults]= useState([] as { filePath: string; line: number; content: string }[])
-  const spotifyPanelOpen = useStore.spotifyPanel((state) => state.spotifyPanelOpen)
-  const setSpotifyPanelOpen = useStore.spotifyPanel((state) => state.setSpotifyPanelOpen)
-  console.log(spotifyPanelOpen)
-
   const ls = theme?.colors?.['left-sidebar']
   const ed = theme?.colors?.editor
 
@@ -215,26 +210,23 @@ const LeftSidebar = () => {
     useStore.activeTabPath.getState().setActiveTabPath(entry.path)
   }
 
-  const togglePanel = useCallback(({ panel }: { panel: 'file-explorer' | 'search' | 'git' | 'task-list' | 'langPackPanel'| 'spotify' }) => {
+  const togglePanel = useCallback(({ panel }: { panel: 'file-explorer' | 'search' | 'git' | 'task-list' | 'langPackPanel' }) => {
     const fe = useStore.fileExplorerOpen.getState()
     const sm = useStore.searchMenuOpen.getState()
     const gm = useStore.gitMenuOpen.getState()
     const tl = useStore.taskListOpen.getState()
     const lp = useStore.langPackOpen.getState()
-    const sp = useStore.spotifyPanel.getState()
 
     if (panel === 'file-explorer') {
-      fe.setFileExplorerOpen(!fe.fileExplorerOpen); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
+      fe.setFileExplorerOpen(!fe.fileExplorerOpen); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false);
     } else if (panel === 'search') {
-      sm.setSearchMenuOpen(!sm.searchMenuOpen); fe.setFileExplorerOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
+      sm.setSearchMenuOpen(!sm.searchMenuOpen); fe.setFileExplorerOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false);
     } else if (panel === 'git') {
-      gm.setGitMenuOpen(!gm.gitMenuOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
+      gm.setGitMenuOpen(!gm.gitMenuOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false);
     } else if (panel === 'task-list') {
-      tl.setTaskListOpen(!tl.taskListOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); lp.setLangPackOpen(false); sp.setSpotifyPanelOpen(false);
+      tl.setTaskListOpen(!tl.taskListOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); lp.setLangPackOpen(false);
     } else if (panel === 'langPackPanel') {
-      lp.setLangPackOpen(!lp.langPackOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); sp.setSpotifyPanelOpen(false);
-    }else if (panel === 'spotify') {
-      sp.setSpotifyPanelOpen(!sp.spotifyPanelOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false); lp.setLangPackOpen(false);
+      lp.setLangPackOpen(!lp.langPackOpen); fe.setFileExplorerOpen(false); sm.setSearchMenuOpen(false); gm.setGitMenuOpen(false); tl.setTaskListOpen(false);
     }
   }, [])
 
@@ -277,7 +269,6 @@ const LeftSidebar = () => {
       console.log('Search results:', res)
     }, 400)
   }  
-  const spotifyClass = cn('flex flex-col w-52 border-r-2 flex-shrink-0')
   return (
     <div
       className="flex flex-row shrink-0 overflow-hidden"
@@ -293,7 +284,6 @@ const LeftSidebar = () => {
           { panel: 'git'           as const, Icon: GitGraph, open: gitMenuOpen      },
           { panel: 'task-list'     as const, Icon: List,     open: taskListOpen     },
           { panel: 'langPackPanel' as const, Icon: Package,  open: langPackOpen     },
-          { panel: 'spotify'       as const, Icon: Music,    open: setSpotifyPanelOpen },
         ]).map(({ panel, Icon, open }) => (
           <button key={panel} onClick={() => togglePanel({ panel })}>
             <Icon
@@ -463,12 +453,6 @@ const LeftSidebar = () => {
               ))}
             </div>
           )}
-        </div>
-      </div>
-      {/* Music panel */}
-      <div className={spotifyClass} style={{ background: sc.panelBg, borderColor: sc.border }} hidden={!spotifyPanelOpen}>
-        <div className="flex flex-col w-full h-full">
-          <SpotifyPlayer />
         </div>
       </div>
     </div>
