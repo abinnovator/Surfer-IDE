@@ -17,6 +17,12 @@ interface SidebarColors {
   iconHoverBg: string
   border: string
   panelBg: string
+  borderRadius?: string
+  paddingX?: string
+  paddingY?: string
+  tabPaddingX?: string
+  tabPaddingY?: string
+  tabBorderRadius?: string
 }
 
 const updateEntry = (entries: FileEntry[], targetPath: string, updater: (e: FileEntry) => FileEntry): FileEntry[] => {
@@ -177,6 +183,7 @@ const LeftSidebar = () => {
   const [results, setResults]= useState([] as { filePath: string; line: number; content: string }[])
   const ls = theme?.colors?.['left-sidebar']
   const ed = theme?.colors?.editor
+  const floating = theme?.floating
 
   const sc: SidebarColors = {
     iconColor:      ls?.['icon-color']            || '#9A8A78',
@@ -184,6 +191,12 @@ const LeftSidebar = () => {
     iconHoverBg:    ls?.['icon-hover-background'] || '#3D3020',
     border:         ls?.border                    || '#3D3020',
     panelBg:        ed?.tabsBackground            || '#1A1208',
+    borderRadius:   ls?.['border-radius'],
+    paddingX:       ls?.['padding-x'],
+    paddingY:       ls?.['padding-y'],
+    tabPaddingX:    ls?.['tab-padding-x'],
+    tabPaddingY:    ls?.['tab-padding-y'],
+    tabBorderRadius: ls?.['tab-border-radius'],
   }
 
   const stripBg = theme?.colors?.titlebar?.background || '#1E1710'
@@ -272,7 +285,12 @@ const LeftSidebar = () => {
   return (
     <div
       className="flex flex-row shrink-0 overflow-hidden"
-      style={{ '--ls-icon': sc.iconColor, '--ls-active': sc.iconActiveColor, '--ls-hover-bg': sc.iconHoverBg } as React.CSSProperties}
+      style={{
+        '--ls-icon': sc.iconColor, '--ls-active': sc.iconActiveColor, '--ls-hover-bg': sc.iconHoverBg,
+        border: floating ? `2px solid ${sc.border}` : undefined,
+        margin: floating ? `${sc.paddingY || '0px'} ${sc.paddingX || '0px'}` : undefined,
+        borderRadius: floating ? (sc.borderRadius || '0px') : undefined,
+      } as React.CSSProperties}
     >
       <div
         className="flex flex-col px-2 py-4 gap-6 w-12 flex-shrink-0 border-r-2"
@@ -285,10 +303,19 @@ const LeftSidebar = () => {
           { panel: 'task-list'     as const, Icon: List,     open: taskListOpen     },
           { panel: 'langPackPanel' as const, Icon: Package,  open: langPackOpen     },
         ]).map(({ panel, Icon, open }) => (
-          <button key={panel} onClick={() => togglePanel({ panel })}>
+          <button
+            key={panel}
+            onClick={() => togglePanel({ panel })}
+            className="cursor-pointer transition-colors flex items-center justify-center"
+            style={{
+              padding: (sc.tabPaddingX || sc.tabPaddingY) ? `${sc.tabPaddingY || '0px'} ${sc.tabPaddingX || '0px'}` : undefined,
+              borderRadius: sc.tabBorderRadius,
+              background: open && sc.tabBorderRadius ? sc.iconHoverBg : undefined,
+            }}
+          >
             <Icon
               size={22}
-              className="cursor-pointer transition-colors hover:text-[var(--ls-active)]"
+              className="hover:text-[var(--ls-active)]"
               style={{ color: open ? sc.iconActiveColor : sc.iconColor }}
             />
           </button>
@@ -361,7 +388,7 @@ const LeftSidebar = () => {
               {results.map((result) => {
                 console.log('Rendering result:', result)
                 return (
-                  <div key={result.filePath ?? result.line} className="flex flex-col gap-1 px-2 py-1 rounded cursor-pointer" style={{ background: sc.iconHoverBg }} onClick={() => handleOpenFile({name: result.filePath?.split(/[\\/]/).pop(), path: result.filePath, isDirectory: false})}>
+                  <div key={result.filePath ?? result.line} className="flex flex-col gap-1 px-2 py-1 rounded cursor-pointer" style={{ background: sc.iconHoverBg }} onClick={() => handleOpenFile({name: result.filePath?.split(/[\\/]/).pop() || '', path: result.filePath, isDirectory: false})}>
                     <span className="text-[10px] truncate" style={{ color: sc.iconColor }}>{result.filePath?.split(/[\\/]/).pop()}</span>
                     <span className="text-[10px] truncate" style={{ color: sc.iconColor }}>{result.filePath}</span>
                     <span className="text-[10px]" style={{ color: sc.iconColor }}>{result.content}</span>

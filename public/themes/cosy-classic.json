@@ -62,6 +62,25 @@
         "background": "#1E1710",
         "text-color": "#9A8A78",
         "border": "#3D3020"
+    },
+    "quickActionMenu": {
+        "background": "#16110B",
+        "border": "#3D3020",
+        "textColor": "#d1d5db",
+        "searchInputBackground": "#1A1208",
+        "searchInputBorder": "#3D3020",
+        "searchInputTextColor": "#675D49",
+        "closeButtonColor": "#675D49",
+        "closeButtonHoverColor": "#E8C088",
+        "sectionHeaderColor": "#675D49",
+        "itemHoverBackground": "#3D3020",
+        "itemIconColor": "#675D49",
+        "itemTextColor": "#d1d5db",
+        "hintTextColor": "#675D49",
+        "inlineInputBackground": "#1A1208",
+        "inlineInputBorder": "#3D3020",
+        "inlineInputTextColor": "#675D49",
+        "border-radius": "16px"
     }
   }
 }

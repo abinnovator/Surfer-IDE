@@ -279,9 +279,41 @@ function App() {
     folderPath ?? null,
   );
   
+  const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico']
+  const EditorContent = ({ activeTab }: { activeTab: any }) => {
+    if (!activeTab) return null
 
+    const fileName = activeTab?.name
+    const ext = fileName?.split('.').pop()?.toLowerCase()
+    const isImage = imageExtensions.includes(ext ?? '')
+
+    return isImage ? (
+      <div className="flex items-center justify-center h-full w-full bg-[#0F0B08]">
+        <img 
+          src={`${activeTab.path}`} 
+          className="max-w-full max-h-full object-contain" 
+          alt={fileName}
+        />
+      </div>
+    ) : (
+      <Editor
+        content={activeTab.content}
+        fileName={activeTab.name}
+        filePath={activeTab.path}
+        onSave={(content) => {
+          saveFile(activeTab.path, content)
+          onSave()
+        }}
+        onKeystroke={onKeystroke}
+      />
+    )
+  }
+  
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div
+      className="relative h-screen w-screen overflow-hidden"
+      style={{ backgroundColor: theme?.appBackground || undefined }}
+    >
       {/* Video */}
       {videoPath != null && (
         <video
@@ -368,16 +400,9 @@ function App() {
 
             <div className="flex-1 overflow-hidden">
               {activeTab ? (
-                <Editor
-                  content={activeTab.content}
-                  fileName={activeTab.name}
-                  filePath={activeTab.path}
-                  onSave={(content) => {
-                    saveFile(activeTab.path, content);
-                    onSave();
-                  }}
-                  onKeystroke={onKeystroke}
-                />
+                <EditorContent activeTab={activeTab} />
+                  
+                
               ) : (
                 <>
                   {folderPath ? (

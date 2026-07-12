@@ -16,6 +16,10 @@ const Titlebar = () => {
 
   const theme = useStore.theme((state) => state.theme)
   const tb = theme?.colors?.titlebar
+  const floating = theme?.floating
+  const tbBorderRadius = tb?.['border-radius']
+  const tbPaddingX = tb?.['padding-x']
+  const tbPaddingY = tb?.['padding-y']
 
   const titleColor= tb?.titleTextColor || tb?.['title-text-color'] || '#C8B898'
   const btnColor  = tb?.rightButtonsColor || '#9A8A78'
@@ -148,11 +152,14 @@ const Titlebar = () => {
   console.log("Active tab path:", activeTab)
   return (
     <div
-      className="flex flex-row items-center border-b-2 h-10 px-4 gap-4 flex-shrink-0 relative z-50 justify-between"
+      className="flex flex-row items-center h-10 px-4 gap-4 flex-shrink-0 relative z-50 justify-between"
       style={{
         ...cssVars,
         background: tb?.background || '#1E1710',
-        borderBottomColor: tb?.border || '#3d3020',
+        borderBottom: floating ? undefined : `2px solid ${tb?.border || '#3d3020'}`,
+        border: floating ? `2px solid ${tb?.border || '#3d3020'}` : undefined,
+        margin: floating ? `${tbPaddingY || '0px'} ${tbPaddingX || '0px'} 0px` : undefined,
+        borderRadius: floating ? (tbBorderRadius || '0px') : undefined,
         WebkitAppRegion: 'drag',
       } as React.CSSProperties}
     >

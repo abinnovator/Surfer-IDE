@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, highlightActiveLine, WidgetType, Decoration } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter } from '@codemirror/language'
@@ -14,7 +14,7 @@ import { html } from '@codemirror/lang-html'
 import { json } from '@codemirror/lang-json'
 import { markdown } from '@codemirror/lang-markdown'
 import { useStore } from '../../lib/zustand'
-import toast from 'react-hot-toast'
+import { StateField, StateEffect } from '@codemirror/state'
 
 const LANG_MAP: Record<string, any> = {
   js: javascript(), jsx: javascript({ jsx: true }),
@@ -48,6 +48,50 @@ interface Props {
   onKeystroke?: () => void
 }
 
+interface Suggestion {
+  text: string
+  pos: number
+}
+
+export const setSuggestion = StateEffect.define<Suggestion | null>()
+
+export const suggestionField = StateField.define<Suggestion | null>({
+  create: () => null,
+  update: (value, transaction) => {
+    // apply the custom effect
+    for (const effect of transaction.effects) {
+      if (effect.is(setSuggestion)) return effect.value
+    }
+    if (transaction.docChanged) return null
+    // clear if cursor moved
+    if (transaction.selection) return null
+    return value
+  },
+  provide: (field) => EditorView.decorations.from(field, (suggestion) => {
+    if (!suggestion) return Decoration.none
+    return Decoration.set([
+      Decoration.widget({ widget: new SuggestionWidget(suggestion.text), side: 1 }).range(suggestion.pos)
+    ])
+  })
+})
+
+class SuggestionWidget extends WidgetType {
+  constructor(private suggestion: string) { super() }
+  
+  toDOM() {
+    const span = document.createElement('span')
+    span.textContent = this.suggestion
+    span.style.color = '#7a7a7a'
+    span.style.whiteSpace = 'pre'
+    span.style.pointerEvents = 'none'
+    return span
+  }
+  
+  eq(other: SuggestionWidget) {
+    return other.suggestion === this.suggestion
+  }
+}
+
 export default function Editor({ content, fileName, filePath, onSave, onKeystroke }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
@@ -69,10 +113,23 @@ export default function Editor({ content, fileName, filePath, onSave, onKeystrok
       closeBrackets(),
       foldGutter(),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      suggestionField,
       keymap.of([
         ...defaultKeymap,
         ...historyKeymap,
         ...closeBracketsKeymap,
+        {
+          key: 'Tab',
+          run: (view) => {
+            const pending = view.state.field(suggestionField)
+            if (!pending) return false
+            view.dispatch({
+              changes: { from: pending.pos, to: pending.pos, insert: pending.text },
+              selection: { anchor: pending.pos + pending.text.length },
+            })
+            return true
+          }
+        },
         indentWithTab,
         {
           key: 'Mod-s',
@@ -88,25 +145,30 @@ export default function Editor({ content, fileName, filePath, onSave, onKeystrok
           key: 'Mod-e',
           run: (view) => {
             const pos = view.state.selection.main.head
-            const line = view.state.doc.lineAt(pos)
-            const cursorPosition = { line: line.number, column: pos - line.from + 1 }
+
             window.ipcRenderer.getToken().then(token => {
-              if (!token) {
-                toast.error('No token stored', { style: { background: '#1E1710', color: '#E8C088' } })
-                return null
-              }
-              return window.ipcRenderer.getInlineSuggestion({
+              if (!token) return null
+
+              const line = view.state.doc.lineAt(pos)
+
+              return window.ipcRenderer.invoke('ai:get-inline-suggestion', {
                 filePath,
                 fileContent: view.state.doc.toString(),
                 token,
-                cursorPosition,
+                cursorPosition: { line: line.number, column: pos - line.from + 1 },
                 workspaceRoot: folderPath || undefined,
               })
             }).then(result => {
               if (!result?.suggestion) return
-              const currentPos = view.state.selection.main.head
-              view.dispatch({ changes: { from: currentPos, insert: result.suggestion } })
+              // ignore stale results if the cursor has since moved
+              if (view.state.selection.main.head !== pos) return
+              view.dispatch({
+                effects: setSuggestion.of({ text: result.suggestion, pos })
+              })
+            }).catch(err => {
+              console.error('inline suggestion error:', err)
             })
+
             return true
           }
         }

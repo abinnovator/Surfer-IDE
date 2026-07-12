@@ -15,6 +15,10 @@ const Statusbar = () => {
   const type = activeTab?.name.split('.').pop()
   const theme = useStore.theme((state) => state.theme)
   const sb = theme?.colors?.statusBar
+  const floating = theme?.floating
+  const sbBorderRadius = sb?.['border-radius']
+  const sbPaddingX = sb?.['padding-x']
+  const sbPaddingBottom = sb?.['padding-bottom']
   const videoState = useStore.video((state) => state.video)
   const videoEnabled = useStore.videoEnabled((state) => state.videoEnabled)
 
@@ -63,8 +67,15 @@ const Statusbar = () => {
   return (
     <>
       <div
-        className="flex flex-row justify-between items-center py-2 px-2 border-t-2"
-        style={{ background: sb?.background || '#1E1710', borderTopColor: sb?.border || '#3D3020', color: sb?.['text-color'] || '#9A8A78' }}
+        className="flex flex-row justify-between items-center py-2 px-2"
+        style={{
+          background: sb?.background || '#1E1710',
+          borderTop: floating ? undefined : `2px solid ${sb?.border || '#3D3020'}`,
+          border: floating ? `2px solid ${sb?.border || '#3D3020'}` : undefined,
+          color: sb?.['text-color'] || '#9A8A78',
+          margin: floating ? `0px ${sbPaddingX || '0px'} ${sbPaddingBottom || '0px'}` : undefined,
+          borderRadius: floating ? (sbBorderRadius || '0px') : undefined,
+        }}
       >
         <div className="flex flex-row gap-2 items-center">
           <span className="text-[8px]">Project: {folderName ? folderName : 'No project Opened'}</span>

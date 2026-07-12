@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { LogOut, Send } from 'lucide-react'
 import { useStore } from '../../lib/zustand'
 
@@ -96,6 +96,10 @@ const SidebarComponent = ({workspaceRoot}: {workspaceRoot: string | null}) => {
   }
   const themes = useStore.theme((state) => state.theme)
   const aiChatThemes = (themes?.colors?.aiChat ?? {}) as Record<string, string | undefined>
+  const floating = themes?.floating
+  const acBorderRadius = aiChatThemes['border-radius']
+  const acPaddingX = aiChatThemes['padding-x']
+  const acPaddingY = aiChatThemes['padding-y']
   const aiChatColors = {
     background: aiChatThemes.background || '#16110B',
     textColor: aiChatThemes['text-color'] || aiChatThemes.textColor || '#9A8A78',
@@ -125,7 +129,14 @@ const SidebarComponent = ({workspaceRoot}: {workspaceRoot: string | null}) => {
   
   if (!userToken) {
     return (
-      <div className="flex flex-col justify-between w-64 border-l-2 border-l-[#3D3020] flex-shrink-0" style={{ background: aiChatColors.background, color: aiChatColors.textColor, borderLeftColor: aiChatColors.border }}>
+      <div className="flex flex-col justify-between w-64 flex-shrink-0" style={{
+        background: aiChatColors.background,
+        color: aiChatColors.textColor,
+        borderLeft: floating ? undefined : `2px solid ${aiChatColors.border}`,
+        border: floating ? `2px solid ${aiChatColors.border}` : undefined,
+        margin: floating ? `${acPaddingY || '0px'} ${acPaddingX || '0px'}` : undefined,
+        borderRadius: floating ? (acBorderRadius || '0px') : undefined,
+      }}>
         <div className="flex flex-col justify-center items-center h-max px-4 gap-3">
           <p className="text-[12px] text-center" style={{ color: aiChatColors.signInTextColor }}>
             Please enter your token to use Surfer AI.<br />
@@ -158,7 +169,13 @@ const SidebarComponent = ({workspaceRoot}: {workspaceRoot: string | null}) => {
   }
 
   return (
-    <div className="flex flex-col w-64 border-l-2 border-l-[#3D3020] bg-[#16110B] flex-shrink-0" style={{ background: aiChatColors.background, borderLeftColor: aiChatColors.border }}>
+    <div className="flex flex-col w-64 flex-shrink-0" style={{
+      background: aiChatColors.background,
+      borderLeft: floating ? undefined : `2px solid ${aiChatColors.border}`,
+      border: floating ? `2px solid ${aiChatColors.border}` : undefined,
+      margin: floating ? `${acPaddingY || '0px'} ${acPaddingX || '0px'}` : undefined,
+      borderRadius: floating ? (acBorderRadius || '0px') : undefined,
+    }}>
       <div className="px-3 py-2.5 border-b-2 border-b-[#3D3020] flex-shrink-0 flex flex-row justify-between" style={{ borderBottomColor: aiChatColors.headerBorderColor }}>
         <h1 className="text-[13px]" style={{ color: aiChatColors.headingColor }}>Surfer AI</h1>
         <button

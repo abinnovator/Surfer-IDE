@@ -92,7 +92,8 @@ ipcMain.handle('ai:get-inline-suggestion', async (_, payload: {
       .join('\n') + '\n' + (lines[payload.cursorPosition.line - 1]?.substring(0, payload.cursorPosition.column) ?? '')
     const afterCursor = (lines[payload.cursorPosition.line - 1]?.substring(payload.cursorPosition.column) ?? '') +
       '\n' + lines.slice(payload.cursorPosition.line).join('\n')
-
+    console.log('beforeCursor (last 200 chars):', beforeCursor.slice(-200))
+    console.log('afterCursor (first 100 chars):', afterCursor.slice(0, 100))
     let projectContext = ''
     if (payload.workspaceRoot) {
       const indexPath = path.join(payload.workspaceRoot, '.surfer', 'index.json')
@@ -103,7 +104,7 @@ ipcMain.handle('ai:get-inline-suggestion', async (_, payload: {
     }
 
     const groq = createGroq({ apiKey: process.env.GROQ_API_KEY! })
-    let model = 'openai/gpt-oss-120b'
+    let model = 'llama-3.1-8b-instant'
     const packPath = payload.packId && payload.workspaceRoot
       ? path.join(payload.workspaceRoot, '.surfer', 'packs', `${payload.packId}.json`)
       : null
@@ -111,13 +112,25 @@ ipcMain.handle('ai:get-inline-suggestion', async (_, payload: {
       const packData = JSON.parse(fs.readFileSync(packPath, 'utf-8'))
       model = packData.data.aiProfile.model ?? model
     }
-
+    console.log('cursorPosition:', payload.cursorPosition)
     const { text, usage } = await generateText({
       model: groq(model),
-      system: `You are a code completion engine inside Surfer IDE. Complete the code at the cursor position. Return ONLY the completion text — no explanation, no markdown, no backticks. Keep it short, one to a few lines max.${projectContext ? `\n\n${projectContext}` : ''}`,
-      prompt: `File: ${payload.filePath}\n\nCode before cursor:\n${beforeCursor.slice(-800)}\n\nCode after cursor:\n${afterCursor.slice(0, 200)}\n\nComplete the code:`,
-      maxOutputTokens: 80,
+      system: `You are a code completion engine. Your ONLY job is to complete the text immediately after the cursor. 
+  - Look at where the cursor is in "Code before cursor" 
+  - Complete ONLY what comes next at that exact position
+  - Return the completion text only — no explanation, no markdown, no backticks
+  - Maximum 1-2 lines
+  - Do NOT suggest unrelated code`,
+
+  prompt:`You are completing code mid-stream. The | marks exactly where the cursor is. Complete ONLY the missing characters — do not rewrite or paraphrase what comes after |.
+
+${beforeCursor.slice(-300)}|${afterCursor.slice(0, 100)}
+
+The text after | already exists. Only return what's missing at |. If the word is already complete after |, return nothing.`,
+      maxOutputTokens: 600,
     })
+    console.log('raw text from model:', JSON.stringify(text))
+    console.log('usage:', usage)
 
     await pool.query(
       'UPDATE users SET token_spend = token_spend + $1 WHERE id = $2',
@@ -859,6 +872,8 @@ ipcMain.handle("search:query", async (_, workspaceRoot: string, query: string) =
   
   return results.slice(0, 200)
 })
+
+// Terminal and shell stuff
 ipcMain.handle('shell:open-external', async (_, url: string) => {
   await shell.openExternal(url)
 })
@@ -952,8 +967,10 @@ function createWindow() {
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      webSecurity: false,
     },
-    titleBarStyle: 'hidden'
+    titleBarStyle: 'hidden',
+    
   })
 
   win.once('ready-to-show', () => {

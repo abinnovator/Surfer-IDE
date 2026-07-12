@@ -2,12 +2,33 @@ import { create } from 'zustand'
 
 export interface ThemeColors {
   editor?: { background?: string; prehighlight?: string; lineNumbers?: string; tabsBackground?: string; tabsBorder?: string; tabsActiveBackground?: string; tabsActiveTextColor?: string; tabsInactiveTextColor?: string; tabsHoverBackground?: string; tabsHoverTextColor?: string }
-  'left-sidebar'?: { 'icon-color'?: string; 'icon-hover-color'?: string; 'icon-hover-background'?: string; border?: string }
-  'aiChat'?: { border?: string; background?: string; 'inputBackground'?: string; 'signInButtonBackground'?: string; 'HeadingColor'?: string; 'inputTextColor'?: string }
-  titlebar?: { background?: string; border?: string; titleTextColor?: string; 'title-text-color'?: string; fileMenuBackground?: string; fileMenuBorder?: string; fileMenuItemHoverBackground?: string; fileMenuItemHoverTextColor?: string; fileMenuItemTextColor?: string; rightButtonsColor?: string; rightButtonsHoverColor?: string }
-  statusBar?: { background?: string; 'text-color'?: string; border?: string }
+  'left-sidebar'?: { 'icon-color'?: string; 'icon-hover-color'?: string; 'icon-hover-background'?: string; border?: string; 'border-radius'?: string; 'padding-x'?: string; 'padding-y'?: string; 'tab-padding-x'?: string; 'tab-padding-y'?: string; 'tab-border-radius'?: string }
+  'aiChat'?: { border?: string; background?: string; 'inputBackground'?: string; 'signInButtonBackground'?: string; 'HeadingColor'?: string; 'inputTextColor'?: string; 'border-radius'?: string; 'padding-x'?: string; 'padding-y'?: string }
+  titlebar?: { background?: string; border?: string; titleTextColor?: string; 'title-text-color'?: string; fileMenuBackground?: string; fileMenuBorder?: string; fileMenuItemHoverBackground?: string; fileMenuItemHoverTextColor?: string; fileMenuItemTextColor?: string; rightButtonsColor?: string; rightButtonsHoverColor?: string; 'border-radius'?: string; 'padding-x'?: string; 'padding-y'?: string }
+  statusBar?: { background?: string; 'text-color'?: string; border?: string; 'border-radius'?: string; 'padding-x'?: string; 'padding-bottom'?: string }
+  quickActionMenu?: {
+    background?: string
+    border?: string
+    textColor?: string
+    searchInputBackground?: string
+    searchInputBorder?: string
+    searchInputTextColor?: string
+    closeButtonColor?: string
+    closeButtonHoverColor?: string
+    sectionHeaderColor?: string
+    itemHoverBackground?: string
+    itemIconColor?: string
+    itemTextColor?: string
+    hintTextColor?: string
+    inlineInputBackground?: string
+    inlineInputBorder?: string
+    inlineInputTextColor?: string
+    'border-radius'?: string
+    'padding-x'?: string
+    'padding-y'?: string
+  }
 }
-export interface Theme { id?: string; name?: string; description?: string; preview?: string; video?: string; colors: ThemeColors }
+export interface Theme { id?: string; name?: string; description?: string; preview?: string; video?: string; appBackground?: string; floating?: boolean; colors: ThemeColors }
 
 export interface Tab { path: string; name: string; content: string }
 export interface TerminalTab { id: string; label: string }

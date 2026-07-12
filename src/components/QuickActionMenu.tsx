@@ -39,6 +39,30 @@ const QuickActionMenu = () => {
   const folder = useStore.folderPath((state) => state.folderPath)
   const activeTabPath = useStore.activeTabPath((state) => state.activeTabPath)
   const videoEnabled = useStore.videoEnabled((state) => state.videoEnabled)
+  const theme = useStore.theme((state) => state.theme)
+
+  const qamTheme = theme?.colors?.quickActionMenu ?? {}
+  const qamColors = {
+    background: qamTheme.background || '#16110B',
+    border: qamTheme.border || '#3D3020',
+    textColor: qamTheme.textColor || '#d1d5db',
+    searchInputBackground: qamTheme.searchInputBackground || '#1A1208',
+    searchInputBorder: qamTheme.searchInputBorder || '#3D3020',
+    searchInputTextColor: qamTheme.searchInputTextColor || '#675D49',
+    closeButtonColor: qamTheme.closeButtonColor || '#675D49',
+    closeButtonHoverColor: qamTheme.closeButtonHoverColor || '#E8C088',
+    sectionHeaderColor: qamTheme.sectionHeaderColor || '#675D49',
+    itemHoverBackground: qamTheme.itemHoverBackground || '#3D3020',
+    itemIconColor: qamTheme.itemIconColor || '#675D49',
+    itemTextColor: qamTheme.itemTextColor || '#d1d5db',
+    hintTextColor: qamTheme.hintTextColor || '#675D49',
+    inlineInputBackground: qamTheme.inlineInputBackground || '#1A1208',
+    inlineInputBorder: qamTheme.inlineInputBorder || '#3D3020',
+    inlineInputTextColor: qamTheme.inlineInputTextColor || '#675D49',
+    borderRadius: qamTheme['border-radius'] || '16px',
+    paddingX: qamTheme['padding-x'],
+    paddingY: qamTheme['padding-y'],
+  }
 
   useHotkeys('ctrl+shift+p', () => {
     qam.getState().setQuickEasyActionMenuOpen(!qam.getState().quickEasyActionMenuOpen)
@@ -295,14 +319,15 @@ const QuickActionMenu = () => {
     : actions
 
   const renderInline = (actionId: string) => {
-    const inputCls = 'bg-[#1A1208] border-[#3D3020] border-2 text-[#675D49] p-2 rounded-md w-full text-xs focus:outline-none'
+    const inputCls = 'border-2 p-2 rounded-md w-full text-xs focus:outline-none'
+    const inputStyle = { background: qamColors.inlineInputBackground, borderColor: qamColors.inlineInputBorder, color: qamColors.inlineInputTextColor }
     const Hint = ({ text }: { text: string }) => (
-      <p className="text-[9px] text-[#675D49] opacity-50">{text}</p>
+      <p className="text-[9px] opacity-50" style={{ color: qamColors.hintTextColor }}>{text}</p>
     )
 
     if (inlineMode === 'createEnv' && actionId === 'create-env') return (
       <div className="flex flex-col gap-1.5 px-4 py-2">
-        <textarea autoFocus placeholder="KEY=value..." rows={5} className={`${inputCls} resize-none`}
+        <textarea autoFocus placeholder="KEY=value..." rows={5} className={`${inputCls} resize-none`} style={inputStyle}
           onKeyDown={async (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
               await createFile(query || '.env', e.currentTarget.value); close()
@@ -314,7 +339,7 @@ const QuickActionMenu = () => {
 
     if (inlineMode === 'addEnvVar' && actionId === 'add-env-var') return (
       <div className="flex flex-col gap-1.5 px-4 py-2">
-        <textarea autoFocus placeholder="KEY=value (one per line)..." rows={3} className={`${inputCls} resize-none`}
+        <textarea autoFocus placeholder="KEY=value (one per line)..." rows={3} className={`${inputCls} resize-none`} style={inputStyle}
           onKeyDown={async (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
               const envPath = `${folder}/.env`
@@ -331,7 +356,7 @@ const QuickActionMenu = () => {
     if (inlineMode === 'createGitignore' && actionId === 'create-gitignore') return (
       <div className="flex flex-col gap-1.5 px-4 py-2">
         <textarea autoFocus rows={7} value={textContent} onChange={e => setTextContent(e.target.value)}
-          className={`${inputCls} resize-none`}
+          className={`${inputCls} resize-none`} style={inputStyle}
           onKeyDown={async (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
               await createFile('.gitignore', textContent); close()
@@ -344,7 +369,7 @@ const QuickActionMenu = () => {
     if (inlineMode === 'createReadme' && actionId === 'create-readme') return (
       <div className="flex flex-col gap-1.5 px-4 py-2">
         <input autoFocus placeholder="Project title (leave blank for folder name)..."
-          className={inputCls}
+          className={inputCls} style={inputStyle}
           onKeyDown={async (e) => {
             if (e.key === 'Enter') {
               const title = e.currentTarget.value || folder?.split(/[\\/]/).pop() || 'Project'
@@ -368,7 +393,7 @@ const QuickActionMenu = () => {
       <div className="flex flex-col gap-1.5 px-4 py-2">
         <input autoFocus
           placeholder={`Ask about ${activeTabPath?.split(/[\\/]/).pop() || 'current file'}...`}
-          className={inputCls}
+          className={inputCls} style={inputStyle}
           onKeyDown={async (e) => {
             if (e.key === 'Enter' && e.currentTarget.value.trim()) {
               await ipc.runAgent(`${e.currentTarget.value} (file: ${activeTabPath})`, folder || ''); close()
@@ -381,11 +406,13 @@ const QuickActionMenu = () => {
     if (inlineMode === 'themePicker' && actionId === 'switch-theme') return (
       <div className="flex flex-col gap-0.5 px-4 py-2">
         {themes.length === 0
-          ? <p className="text-[10px] text-[#675D49] opacity-50">No themes installed</p>
+          ? <p className="text-[10px] opacity-50" style={{ color: qamColors.hintTextColor }}>No themes installed</p>
           : themes.map((t) => (
               <button key={t.id}
-                className="flex items-center px-2 py-1 text-[12px] rounded hover:bg-[#3D3020] text-left transition-colors cursor-pointer"
-                style={{ color: '#9A8A78' }}
+                className="flex items-center px-2 py-1 text-[12px] rounded text-left transition-colors cursor-pointer"
+                style={{ color: qamColors.itemTextColor }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = qamColors.itemHoverBackground }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                 onClick={async () => {
                   await ipc.updateActiveTheme(t.id)
                   const ts = await ipc.getSpecificTheme(t.id)
@@ -407,20 +434,35 @@ const QuickActionMenu = () => {
 
   const toggleSection = (s: string) => setCollapsed(prev => ({ ...prev, [s]: !prev[s] }))
 
+  const itemBtnProps = {
+    onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = qamColors.itemHoverBackground },
+    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.background = '' },
+  }
+
   return (
-    <div className="bg-[#16110B] text-gray-300 border-[#3D3020] border-2 p-2 rounded-2xl w-80 max-h-[68vh] flex flex-col shadow-2xl">
+    <div
+      className="border-2 p-2 w-80 max-h-[68vh] flex flex-col shadow-2xl"
+      style={{ background: qamColors.background, color: qamColors.textColor, borderColor: qamColors.border, borderRadius: qamColors.borderRadius, padding: (qamColors.paddingX || qamColors.paddingY) ? `${qamColors.paddingY || '8px'} ${qamColors.paddingX || '8px'}` : undefined }}
+    >
       {/* Search bar */}
       <div className="flex items-center gap-2 pb-2">
         <input
           type="text"
           autoFocus
           placeholder="Search commands..."
-          className="bg-[#1A1208] border-[#3D3020] border-2 text-[#675D49] p-2 rounded-md flex-1 text-xs focus:outline-none"
+          className="border-2 p-2 rounded-md flex-1 text-xs focus:outline-none"
+          style={{ background: qamColors.searchInputBackground, borderColor: qamColors.searchInputBorder, color: qamColors.searchInputTextColor }}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => { if (e.key === 'Escape') close() }}
         />
-        <button onClick={close} className="text-[#675D49] hover:text-[#E8C088] transition-colors p-1 shrink-0">
+        <button
+          onClick={close}
+          className="transition-colors p-1 shrink-0"
+          style={{ color: qamColors.closeButtonColor }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = qamColors.closeButtonHoverColor }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = qamColors.closeButtonColor }}
+        >
           <X size={13} />
         </button>
       </div>
@@ -428,17 +470,18 @@ const QuickActionMenu = () => {
       {/* Action list */}
       <div
         className="flex flex-col overflow-y-auto flex-1 gap-0.5"
-        style={{ scrollbarWidth: 'thin', scrollbarColor: '#3D3020 transparent' }}
+        style={{ scrollbarWidth: 'thin', scrollbarColor: `${qamColors.border} transparent` }}
       >
         {query.trim()
           ? filtered.map(action => (
               <div key={action.id} className="flex flex-col">
                 <button
-                  className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[#3D3020] text-left transition-colors cursor-pointer w-full"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded text-left transition-colors cursor-pointer w-full"
                   onClick={action.onClick}
+                  {...itemBtnProps}
                 >
-                  <span className="text-[#675D49] shrink-0">{action.icon}</span>
-                  <span className="text-[12px]">{action.label}</span>
+                  <span className="shrink-0" style={{ color: qamColors.itemIconColor }}>{action.icon}</span>
+                  <span className="text-[12px]" style={{ color: qamColors.itemTextColor }}>{action.label}</span>
                 </button>
                 {renderInline(action.id)}
               </div>
@@ -450,7 +493,8 @@ const QuickActionMenu = () => {
               return (
                 <div key={section} className="flex flex-col">
                   <button
-                    className="flex items-center gap-1 px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#675D49] opacity-60 hover:opacity-100 transition-opacity w-full"
+                    className="flex items-center gap-1 px-2 py-0.5 text-[9px] uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity w-full"
+                    style={{ color: qamColors.sectionHeaderColor }}
                     onClick={() => toggleSection(section)}
                   >
                     {isCollapsed ? <ChevronRight size={9} /> : <ChevronDown size={9} />}
@@ -459,11 +503,12 @@ const QuickActionMenu = () => {
                   {!isCollapsed && sectionActions.map(action => (
                     <div key={action.id} className="flex flex-col">
                       <button
-                        className="flex items-center gap-2 px-4 py-1.5 rounded hover:bg-[#3D3020] text-left transition-colors cursor-pointer w-full"
+                        className="flex items-center gap-2 px-4 py-1.5 rounded text-left transition-colors cursor-pointer w-full"
                         onClick={action.onClick}
+                        {...itemBtnProps}
                       >
-                        <span className="text-[#675D49] shrink-0">{action.icon}</span>
-                        <span className="text-[12px]">{action.label}</span>
+                        <span className="shrink-0" style={{ color: qamColors.itemIconColor }}>{action.icon}</span>
+                        <span className="text-[12px]" style={{ color: qamColors.itemTextColor }}>{action.label}</span>
                       </button>
                       {renderInline(action.id)}
                     </div>
@@ -473,7 +518,7 @@ const QuickActionMenu = () => {
             })
         }
         {filtered.length === 0 && (
-          <p className="text-[#675D49] text-[11px] px-4 py-2 opacity-50">No commands found</p>
+          <p className="text-[11px] px-4 py-2 opacity-50" style={{ color: qamColors.hintTextColor }}>No commands found</p>
         )}
       </div>
     </div>
