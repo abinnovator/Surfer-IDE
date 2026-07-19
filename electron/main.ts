@@ -213,6 +213,12 @@ async function getHacktimeToken(): Promise<string | null> {
   const encrypted = fs.readFileSync(tokenFilePath)
   return safeStorage.decryptString(Buffer.from(encrypted))
 }
+ipcMain.handle('hackatime:delete-token', () => {
+  const tokenFilePath = path.join(app.getPath('userData'), 'hackatime-token.enc')
+  if (fs.existsSync(tokenFilePath)) {
+    fs.unlinkSync(tokenFilePath)
+  } 
+})
 async function sendHackatimeHeartbeat(payload: {
   entity: string
   language: string

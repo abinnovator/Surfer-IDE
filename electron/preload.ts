@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   hackatimeStoreToken: (token: string) => ipcRenderer.invoke('hackatime:store-token', token),
   hackatimeGetToken: () => ipcRenderer.invoke('hackatime:get-token'),
   hackatimeGetTodaysStats: () => ipcRenderer.invoke('hackatime:get-todays-stats'),
+  hackatimeDeleteToken: () => ipcRenderer.invoke('hackatime:delete-token'),
   buildSearchIndex: (workspaceRoot: string) => ipcRenderer.invoke('search:build-index', workspaceRoot),
   searchIndex: (workspaceRoot: string, query: string) => ipcRenderer.invoke('search:index', workspaceRoot, query),
   getPercentageUsed: (token: string) => ipcRenderer.invoke('ai:get-percentage-used', token),

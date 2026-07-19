@@ -47,6 +47,8 @@ export default function Settings() {
 
   const [surferToken, setSurferToken] = useState('')
   const [savedToken, setSavedToken] = useState('')
+  const [saveHackatimeToken, setSaveHackatimeToken] = useState('')
+  const [hackatimeToken, setHackatimeToken] = useState('')
   const [inlineSuggestions, setInlineSuggestions] = useState(true)
   const [copied, setCopied] = useState(false)
   const [tokenSpend, setTokenSpend] = useState<number | null>(null)
@@ -79,6 +81,11 @@ export default function Settings() {
         fetchSpend(token)
       }
     }).catch(() => {})
+    ipc.getHackatimeToken().then((token: string | null) => {
+      if (token) {
+        setSaveHackatimeToken(token)
+      }
+    }).catch(() => {})
 
     ipc.invoke?.('settings:get', 'inlineSuggestions').then((v: boolean) => { if (v !== undefined) setInlineSuggestions(v) }).catch(() => {})
     ipc.invoke?.('packs:list').then((p: any[]) => setInstalledPacks(p ?? [])).catch(() => {})
@@ -90,6 +97,10 @@ export default function Settings() {
     setTokenSpend(null)
     fetchSpend(surferToken)
   }
+  const saveHackatimeTokenLocally = async () => {
+    await ipc.hackatimeStoreToken(hackatimeToken).catch(() => {})
+    setSaveHackatimeToken(hackatimeToken)
+  }
 
   const signOut = async () => {
     await ipc.deleteToken().catch(() => {})
@@ -97,9 +108,19 @@ export default function Settings() {
     setSavedToken('')
     setTokenSpend(null)
   }
+  const hackatimeSignOut = async () => {
+    await ipc.hackatimeDeleteToken().catch(() => {})
+    setHackatimeToken('')
+    setSaveHackatimeToken('')
+  }
 
   const copyToken = () => {
     navigator.clipboard.writeText(savedToken)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  const copyHackatimeToken = () => {
+    navigator.clipboard.writeText(saveHackatimeToken)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
@@ -160,7 +181,7 @@ export default function Settings() {
 
           {activeSection === 'AI' && (
             <div>
-              <SectionTitle>AI</SectionTitle>
+              <SectionTitle>AI & Hackatime</SectionTitle>
 
               {/* Token */}
               <div className="mb-5">
@@ -222,7 +243,46 @@ export default function Settings() {
                   Ctrl+E
                 </kbd>
               </div>
-
+                
+                {/* Hackatime Stuff */}
+              <div className="mb-5">
+                <p className={label}>Hackatime token</p>
+                <p className={`${sub} mb-2`}>Used to authenticate into hackatime which is a service for tracking your coding time</p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder=""
+                    value={hackatimeToken}
+                    onChange={e => setHackatimeToken(e.target.value)}
+                    className={`${inputCls} flex-1`}
+                  />
+                  {saveHackatimeToken && (
+                    <button
+                      onClick={copyHackatimeToken}
+                      title="Copy token"
+                      className="px-2 text-[#9A8A78] hover:text-[#E8C088] transition-colors"
+                    >
+                      {copied ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  )}
+                  <button
+                    onClick={saveHackatimeTokenLocally}
+                    disabled={hackatimeToken === saveHackatimeToken}
+                    className="px-3 py-1 text-[11px] bg-[#3D3020] text-[#E8C088] rounded hover:bg-[#5A4530] disabled:opacity-40 transition-colors cursor-pointer disabled:cursor-default"
+                  >
+                    Save
+                  </button>
+                  {saveHackatimeToken && (
+                    <button
+                      onClick={hackatimeSignOut}
+                      className="px-3 py-1 text-[11px] bg-[#1A1208] border border-[#3D3020] text-[#9A8A78] rounded hover:border-[#E8C088] hover:text-[#E8C088] transition-colors cursor-pointer"
+                    >
+                      Sign out
+                    </button>
+                  )}
+                </div>
+              </div>
+              {/* Token Usage */}
               <div className={`${row} border-none`}>
                 <div>
                   <p className={label}>Token usage</p>
@@ -230,9 +290,9 @@ export default function Settings() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-[11px] text-[#675D49]">
-                    {!savedToken ? 'No token saved' : loadingSpend ? 'Loading…' : tokenSpend !== null ? `${tokenSpend.toFixed(1)}% used` : '—'}
+                    {!saveHackatimeToken ? 'No token saved' : loadingSpend ? 'Loading…' : tokenSpend !== null ? `${tokenSpend.toFixed(1)}% used` : '—'}
                   </span>
-                  {savedToken && tokenSpend !== null && (
+                  {saveHackatimeToken && tokenSpend !== null && (
                     <div className="w-24 h-1 bg-[#2A1F12] rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
