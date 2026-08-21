@@ -17,7 +17,10 @@
       "tabsActiveTextColor": "#f0f2f5",
       "tabsInactiveTextColor": "#5a6070",
       "tabsHoverBackground": "#161820",
-      "tabsHoverTextColor": "#9ba3b2"
+      "tabsHoverTextColor": "#9ba3b2",
+      "paddingx": "4px",
+      "paddingy": "4px",
+      "borderRadius": "10px"
     },
     "left-sidebar": {
       "icon-color": "#4a5160",
@@ -25,8 +28,8 @@
       "icon-hover-background": "#1a1d24",
       "border": "#1e2128",
       "border-radius": "10px",
-      "padding-x": "38px",
-      "padding-y": "10px",
+      "padding-x": "4px",
+      "padding-y": "4px",
       "tab-border-radius": "10px"
     },
     "aiChat": {
@@ -53,8 +56,8 @@
       "headerBorder": "#1e2128",
       "inputBorder": "#1e2128",
       "border-radius": "10px",
-      "padding-x": "38px",
-      "padding-y": "10px"
+      "padding-x": "4px",
+      "padding-y": "4px"
     },
     "titlebar": {
       "background": "#0d0f12",
@@ -67,8 +70,8 @@
       "rightButtonsColor": "#4a5160",
       "rightButtonsHoverColor": "#f0f2f5",
       "border-radius": "10px",
-      "padding-x": "38px",
-      "padding-y": "10px",
+      "padding-x": "4px",
+      "padding-y": "4px",
       "border": "#1e2128"
     },
     "statusBar": {
@@ -76,8 +79,8 @@
       "text-color": "#4a5160",
       "border": "#1e2128",
       "border-radius": "10px",
-      "padding-x": "38px",
-      "padding-bottom": "13px"
+      "padding-x": "4px",
+      "padding-bottom": "4px"
     },
     "quickActionMenu": {
       "background": "#111318",

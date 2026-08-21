@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 export interface ThemeColors {
-  editor?: { background?: string; prehighlight?: string; lineNumbers?: string; tabsBackground?: string; tabsBorder?: string; tabsActiveBackground?: string; tabsActiveTextColor?: string; tabsInactiveTextColor?: string; tabsHoverBackground?: string; tabsHoverTextColor?: string }
+  editor?: { background?: string; prehighlight?: string; lineNumbers?: string; tabsBackground?: string; tabsBorder?: string; tabsActiveBackground?: string; tabsActiveTextColor?: string; tabsInactiveTextColor?: string; tabsHoverBackground?: string; tabsHoverTextColor?: string; paddingx?: string; paddingy?: string; borderRadius?: string }
   'left-sidebar'?: { 'icon-color'?: string; 'icon-hover-color'?: string; 'icon-hover-background'?: string; border?: string; 'border-radius'?: string; 'padding-x'?: string; 'padding-y'?: string; 'tab-padding-x'?: string; 'tab-padding-y'?: string; 'tab-border-radius'?: string }
   'aiChat'?: { border?: string; background?: string; 'inputBackground'?: string; 'signInButtonBackground'?: string; 'HeadingColor'?: string; 'inputTextColor'?: string; 'border-radius'?: string; 'padding-x'?: string; 'padding-y'?: string }
   titlebar?: { background?: string; border?: string; titleTextColor?: string; 'title-text-color'?: string; fileMenuBackground?: string; fileMenuBorder?: string; fileMenuItemHoverBackground?: string; fileMenuItemHoverTextColor?: string; fileMenuItemTextColor?: string; rightButtonsColor?: string; rightButtonsHoverColor?: string; 'border-radius'?: string; 'padding-x'?: string; 'padding-y'?: string }

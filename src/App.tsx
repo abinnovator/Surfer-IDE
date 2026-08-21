@@ -286,6 +286,7 @@ function App() {
     const fileName = activeTab?.name
     const ext = fileName?.split('.').pop()?.toLowerCase()
     const isImage = imageExtensions.includes(ext ?? '')
+    
 
     return isImage ? (
       <div className="flex items-center justify-center h-full w-full bg-[#0F0B08]">
@@ -347,7 +348,7 @@ function App() {
           {/* Editor area */}
           <div
             className="flex-1 overflow-hidden flex flex-col"
-            style={{ backgroundColor: editorStyles.background || '#0F0B08' }}
+            style={{ backgroundColor: editorStyles.background || '#0F0B08',  borderRadius: editorStyles.borderRadius || '0px', paddingLeft: editorStyles.paddingx || '0px', paddingRight: editorStyles.paddingx || '0px', paddingTop: editorStyles.paddingy || '0px', paddingBottom: editorStyles.paddingy || '0px' }}
           >
             {/* Tab bar */}
             {openTabs.length > 0 && (
@@ -356,6 +357,8 @@ function App() {
                 style={{
                   backgroundColor: editorStyles.tabsBackground || '#1A1208',
                   scrollbarWidth: 'none',
+                  borderTopLeftRadius: editorStyles.borderRadius || '0px',
+                  borderTopRightRadius: editorStyles.borderRadius || '0px',
                 }}
               >
                 {openTabs.map((tab) => (
