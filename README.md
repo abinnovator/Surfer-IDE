@@ -14,7 +14,7 @@ Surfer is built around the idea of adaptability and customization. Every feature
 
 Indexing creates a summary of every file in your project, giving AI agents and the editor deep context about what you're building. It powers several core features:
 
-- **Run projects instantly** — indexed projects can be launched with a single button click
+- **Run projects instantly** — indexed projects can be launched with a single button click(Still has a few kinks lol)
 - **Context-aware AI** — agents have full project context, leading to fewer errors and more relevant suggestions
 
 ### Lang Packs
@@ -28,3 +28,5 @@ Themes let you make the editor look the way you want. A few curated themes are a
 
 ### Inbuilt Hackatime
 Inbuilt hackatime allows you to track your time directly in the editor without any extra extensions so all you need is a hackatime api key
+
+(If you think this is ai its not. except for the themes part.:))
